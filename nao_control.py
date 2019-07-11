@@ -64,6 +64,8 @@ class NaoControl:
         # Confirm the initialization process has been concluded 
         self.init_completed = True
 
+        self.beg_for_token_start(False)
+
 
 
     def begin_game(self):
@@ -120,8 +122,11 @@ class NaoControl:
 
     def onTouched(self, strVarName, value):
         for p in value:
-            if p[1] and p[0] in ["LArm", "RArm"]:
-                self.beg_for_token_finish()
+            if p[1]:
+                if p[0] ==  in "RArm"
+                    self.beg_for_token_finish(False)
+                if p[0] ==  in "LArm"
+                    self.beg_for_token_finish(True)
 
     def beg_for_token_start(self, isLeftArm):
         self.motionProxy.setStiffnesses("RArm", 1.0)
