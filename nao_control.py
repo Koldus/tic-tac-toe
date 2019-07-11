@@ -123,9 +123,9 @@ class NaoControl:
     def onTouched(self, strVarName, value):
         for p in value:
             if p[1]:
-                if p[0] ==  in "RArm"
+                if p[0] == "RArm":
                     self.beg_for_token_finish(False)
-                if p[0] ==  in "LArm"
+                if p[0] == "LArm":
                     self.beg_for_token_finish(True)
 
     def beg_for_token_start(self, isLeftArm):
