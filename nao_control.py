@@ -78,9 +78,11 @@ class NaoControl:
             self.postureProxy.wait(id, 0)
         
         # Configure head to the right position
-        self.motionProxy.setStiffnesses("Head", 0.0)
-        self.motionProxy.setAngles("HeadPitch", (29 * almath.TO_RAD), 0.2)
         self.motionProxy.setStiffnesses("Head", 1.0)
+        hNames = ["HeadPitch", "HeadYaw"]
+        hValues = [(29 * almath.TO_RAD), (0.0 * almath.TO_RAD)]
+        hTimes = [2.0] * 2
+        self.motionProxy.angleInterpolation(hNames, hValues, hTimes, True)
 
         time.sleep(1.0)
 
