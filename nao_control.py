@@ -2,16 +2,25 @@ import numpy as np
 from naoqi import ALProxy
 import almath
 import cv2
-import time
+import random
+import functools
 
 from config import *
 from nao_vision import NaoVision
+
+class State:
+    def __init__(self):
+        begging_left_arm = False
+        begging_right_arm = False
 
 class NaoControl:    
     '''
     Main class that controls the game and all interaction with the Nao robot.
     '''
     
+    SAY_TOKEN_GIVEN = ["Fine", "Thanks", "OK. I got it.", "Let me play"]
+
+
     ## -------------------------------------------------------------
     #    MAIN FUNCTIONS
     ## -------------------------------------------------------------
@@ -20,6 +29,7 @@ class NaoControl:
         Constructor for NaoControl class, takes ip_address, port and name for comms with the Nao robot and a logger object.
         '''
         self.logger = logging
+        self.state = State()
 
         # Setup variables for managing the game flow
         self.init_completed = False
@@ -32,7 +42,10 @@ class NaoControl:
         self.postureProxy = ALProxy("ALRobotPosture", ip_address, port)
         self.motionProxy = ALProxy("ALMotion", ip_address, port)
         self.cameraProxy = ALProxy("ALVideoDevice", ip_address, port)
-        self.ledProxy = ALProxy("ALLeds", ip_address, port)
+        self.tts = ALProxy("ALTextToSpeech")
+        self.memory_service = ALProxy("ALMemory")
+        self.touch = self.memory_service.subscriber("TouchChanged")
+        self.id = self.touch.signal.connect(functools.partial(self.onTouched, "TouchChanged"))
 
         self.logger.debug("Proxies with %s established", str(xo_config_robot_name))
 
@@ -46,6 +59,8 @@ class NaoControl:
         # Assume the initial position and wait for the vision to be enabled
         self.assume_initial_position()
 
+        # Listen for touch
+        
         # Confirm the initialization process has been concluded 
         self.init_completed = True
 
@@ -78,41 +93,65 @@ class NaoControl:
             self.postureProxy.wait(id, 0)
         
         # Configure head to the right position
+        self.motionProxy.setStiffnesses("Head", 0.0)
+        self.motionProxy.setAngles("HeadPitch", (29 * almath.TO_RAD), 0.1)
         self.motionProxy.setStiffnesses("Head", 1.0)
-        hNames = ["HeadPitch", "HeadYaw"]
-        hValues = [(29 * almath.TO_RAD), (0.0 * almath.TO_RAD)]
-        hTimes = [2.0] * 2
-        self.motionProxy.angleInterpolation(hNames, hValues, hTimes, True)
-
-        time.sleep(1.0)
 
         # Configure arms to the right position
-        rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"]
-        rValues = [(10.3 * almath.TO_RAD), (-0.3 * almath.TO_RAD), (9.5 * almath.TO_RAD), (2.5 * almath.TO_RAD), (5.0 * almath.TO_RAD),
-                   (10.3 * almath.TO_RAD), (-0.3 * almath.TO_RAD), (9.5 * almath.TO_RAD), (2.5 * almath.TO_RAD), (5.0 * almath.TO_RAD)]
-        rTimes = [2.0] * 10
-        self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
-        self.ledProxy.randomEyes(1.0)
-        self.ledProxy.off("FaceLeds")
-
-        # Wait until a board has been identified and complete the relaxed position
-        while not self.vision.find_board( self.take_a_look() ):
-            pass
-
-        # Put the hands down and relax
-        self.ledProxy.randomEyes(1.0)
-        self.ledProxy.off("FaceLeds")
-
-        rValues = [(48.0 * almath.TO_RAD), (1.0 * almath.TO_RAD), (85.0 * almath.TO_RAD), (48.0 * almath.TO_RAD), (5.0 * almath.TO_RAD),
-                   (48.0 * almath.TO_RAD), (1.0 * almath.TO_RAD), (-85.0 * almath.TO_RAD), (-48.0 * almath.TO_RAD), (5.0 * almath.TO_RAD)]
-        self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
-        
         self.motionProxy.setStiffnesses("RArm", 0.0)
         self.motionProxy.setStiffnesses("LArm", 0.0)
+
+
+        rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"]
+
+        rValues = [(48.0 * almath.TO_RAD), (1.0 * almath.TO_RAD), (85.0 * almath.TO_RAD), (-48.0 * almath.TO_RAD), (5.0 * almath.TO_RAD),
+                   (48.0 * almath.TO_RAD), (1.0 * almath.TO_RAD), (85.0 * almath.TO_RAD), ( 48.0 * almath.TO_RAD), (5.0 * almath.TO_RAD)]
+        rTimes = [2.0] * 8
+        self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
+        self.motionProxy.setStiffnesses("RArm", 0.0)
+        self.motionProxy.setStiffnesses("LArm", 0.0)
+
+        # Wait until a board has been identified and complete the relaxed position
+
 
         # Close the initialization process
         self.logger.debug("Initial position assumed, default position set to " + xo_config_base_position + " for efficient stability")
         
+
+    def onTouched(self, strVarName, value):
+        for p in value:
+            if p[1] and p[0] in ["LArm", "RArm"]:
+                self.beg_for_token_finish()
+
+    def beg_for_token_start(self, isLeftArm):
+        self.motionProxy.setStiffnesses("RArm", 1.0)
+        self.motionProxy.setStiffnesses("LArm", 1.0)
+        if isLeftArm:
+            # left arm
+            state.begging_left_arm = True
+            state.begging_right_arm = False
+            rNames = ["LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw", "LHand"]
+            rValues = [rad(-14.1),      rad(24.0),       rad(-77.9),  rad(-21.1),   rad(-104.5), rad(0.53)]
+        else:
+            # right arm
+            state.begging_right_arm = True
+            state.begging_left_arm = False
+            rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "RHand"]
+            rValues = [rad(-14.1),      rad(-24.0),      rad(77.9),   rad(21.1),    rad(104.5),  rad(0.53)]
+
+        rTimes = [2.0] * 12
+        self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
+
+    def beg_for_token_finish(self, isLeftArm):
+        if (isLeftArm == True and state.begging_left_arm == True) or (isLeftArm == False and state.begging_right_arm == True):
+            self.motionProxy.setStiffnesses("RArm", 0.0)
+            self.motionProxy.setStiffnesses("LArm", 0.0)
+            state.begging_left_arm = False
+            state.begging_left_arm = False
+            self.touch.signal.disconnect(self.id)
+            self.tts.say(self.SAY_TOKEN_GIVEN[random.randrange(len(self.SAY_TOKEN_GIVEN))])
+            self.id = self.touch.signal.connect(functools.partial(self.onTouched, "TouchChanged"))
+
 
     def configure_camera(self):
         '''
@@ -174,3 +213,5 @@ class NaoControl:
         print("Execute the move")
         pass
         
+def rad(val):
+    return val * almath.TO_RAD
