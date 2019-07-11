@@ -1,27 +1,12 @@
-from naoqi import ALProxy
-from game_logging import GameLogger
+import cv2 as cv
 
 class NaoVision:    
 
-    def __init__(self, ip_address, port):        
-        self.ip = ip_address
-        self.port = port
-        
-        self.logger = GameLogger()
-        self.logger.message("c", "Robot vision initialized")
+    def __init__(self, sizes, logging):
+        self.camera_size = sizes
+        self.logger = logging
+        self.logger.debug("Computer vision initialized with the following camera size: %s",str(self.camera_size))
 
-    
-    def create_proxy(self):
-        self.cam = ALProxy("ALPhotoCapture", self.ip, self.port)
-        self.cam.setCameraID(1)
-        self.cam.setPictureFormat('jpg')
-        self.cam.setResolution(2)
-        self.logger.message("c", "Robot vision proxy created")
-
-
-    def connect_dev_camera(self):
-        self.logger.message("c", "Robot vision proxy created")
-        
 
     def cut_image(self, frame, x0, y0, x1, y1):
         return frame[x0:y0, x1:y1]

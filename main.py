@@ -1,109 +1,105 @@
 #!/usr/bin/env python
 '''
-Nao Playing Tic-Tac-To2, v0.1
-Date: August 15, 2018
+Nao Playing Tic-Tac-Toe, v0.1
+Date: June 18, 2019
 Company: DHL Information Services (Europe), s.r.o.
 
-@author: Miroslav Koldus
+@author: mkoldus
 '''
 
-import sys, os
-from naoqi import ALProxy
-
-from nao_control import NaoControl
-from nao_vision import NaoVision
-from game_control import GameControl
-from game_logging import GameLogger
-
+import sys
+import argparse
 from threading import Timer
-import json
+import logging
 
+from config import *
+from nao_control import NaoControl
+
+# Default parameter
 robotIp = "127.0.0.1"
-port = 44469
+port = 9559
 
-live = True
+# Setup the main logger
+logging.basicConfig(filename = 'html/data/main.log', filemode = 'w', format = '%(asctime)s;%(levelname)s;%(filename)s;%(message)s', level = logging.DEBUG)
 
-robot = None
-vision = None
-game = None
-logger = GameLogger()
+# def check_board_status():
+#     current_status = [0,1,2,3,4,5,6,7,8]
+#     last_status = [0,1,2,3,4,5,6,7,8]
 
-def check_board_status():
-    current_status = [0,1,2,3,4,5,6,7,8]
-    last_status = [0,1,2,3,4,5,6,7,8]
+#     if game.board == current_status:
+#         logging.info("No change in the board state")
+#         last_status = game.board
+#         t = Timer(2.0, check_board_status)
+#         t.start()
+#     else:
+#         if game.board == last_status:
+#             logging.info("Board state change confirmed. Robot's turn.")
+#             pass
+#         else:
+#             logging.info("Board state change identified, waiting for confirmation.")
+#             last_status = game.board
+#             t = Timer(2.0, check_board_status)
+#             t.start()        
 
-    if game.board == current_status:
-        logger.message("i", "No change in the board state")
-        last_status = game.board
-        t = Timer(2.0, check_board_status)
-        t.start()
+
+def initialize_game():
+    
+    # Setup robot connection
+    robot = NaoControl(robotIp, port, logging)
+
+    if(not robot.init_completed):
+        logging.warning("%s initialization process couldn't be completed and the game ended.", str(xo_config_robot_name))
+        logging.debug("init_completed state evaluated as False")
+        sys.exit()
+
+    # Initialize the game
+    robot.begin_game()
+
+    if(not robot.game_ready):
+        logging.warning("The game initialization process couldn't be completed and the application hasended.")
+        logging.debug("game_ready state evaluated as False")
+        sys.exit()
+    
+    # Keep playing until the end
+    while robot.game_ready:
+        pass
+    
+    if( robot.result == 0 ):
+        logging.info("Game ended: Human won.")
+    elif( robot.result == 1 ):
+        logging.info("Game ended: A tie.")
+    elif( robot.result == 2 ):
+        logging.info("Game ended: Marvin won.")
     else:
-        if game.board == last_status:
-            logger.message("i", "Board state change confirmed. Robot's turn.")
-        else:
-            logger.message("i", "Board state change identified, waiting for confirmation.")
-            last_status = game.board
-            t = Timer(2.0, check_board_status)
-            t.start()        
+        logging.error("Application ended correctly, but a correct result.")
+
+    sys.exit()
 
 
-def initialize_game(robotIP, port):
-    # Setup robot connection + default position
-    global robot
-    robot = NaoControl(robotIP, port)
-    robot.assume_initial_position()
-    
-    # Setup robot's vision connection + create proxy
-    global vision
-    
-    vision = NaoVision(robotIP, port)
-    if(live):
-        vision.create_proxy()
-    else:
-        vision.connect_dev_camera()
 
-    # Search for the board
-    print("At this point, I should search for the board to confirm the physical setup")
-    i = 0
-    # while True:
-    #     if( i<=10 ):
-    #         break
-    #     i += 1
-
-
-    print(i)
-    
-    # Setup game controller
-    global game
-    game = GameControl()
-
-    # -------------------------------
-    #           Start the game
-    # -------------------------------
-    print("Ready to start the game")
-    # check_board_status()
-
+## -------------------------------------------------------------
+ #    START THE MAIN PROCESS
+## -------------------------------------------------------------
 if __name__ == '__main__':
-    # Initialize game configuration
-    # robotIp = "192.168.8.101"
-    # port = 9559 # Choregraphe tends to change ports on your local environment
+    
+    # Initialize game configuration based on input from command line
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--ip', type=str, default="127.0.0.1", help="Robot's IP address")
+    parser.add_argument('--port', type=int, default="9559", help="Robot's port number")
 
-    for arg in sys.argv:
-        arg_b = arg.split(':')
-        if arg_b[0] == "-dev":
-            live = False
-        if arg_b[0] == "-ip":
-            robotIp = arg_b[1]
-        if arg_b[0] == "-port":
-            port = arg_b[1]
+    args = parser.parse_args()
+
+    robotIp = args.ip
+    port = args.port
 
     try:
-        logger.message("i", "Robot's IP address set to " + str(robotIp))
-        logger.message("i", "Robot's port set to " + str(port))
+        logging.info("Robot's IP address set to %s", str(robotIp))
+        logging.info("Robot's port set to %s", str(port))
         
-        initialize_game(robotIp, port)
+        # Initiate the game
+        initialize_game()
+        
     except Exception as e:
-        logger.message("e", "Game couldn't be started")
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        print(exc_type, fname, exc_tb.tb_lineno,e)
+        # Log the errors before game termination
+        logging.fatal("Game exectution failed")
+        logging.debug('Error message: %s', str(e).replace("\n"," ").replace("\t"," "))
