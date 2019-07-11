@@ -2,6 +2,7 @@ import numpy as np
 from naoqi import ALProxy
 import almath
 import cv2
+import time
 
 from config import *
 from nao_vision import NaoVision
@@ -31,6 +32,7 @@ class NaoControl:
         self.postureProxy = ALProxy("ALRobotPosture", ip_address, port)
         self.motionProxy = ALProxy("ALMotion", ip_address, port)
         self.cameraProxy = ALProxy("ALVideoDevice", ip_address, port)
+        self.ledProxy = ALProxy("ALLeds", ip_address, port)
 
         self.logger.debug("Proxies with %s established", str(xo_config_robot_name))
 
@@ -77,23 +79,34 @@ class NaoControl:
         
         # Configure head to the right position
         self.motionProxy.setStiffnesses("Head", 0.0)
-        self.motionProxy.setAngles("HeadPitch", (29 * almath.TO_RAD), 0.1)
+        self.motionProxy.setAngles("HeadPitch", (29 * almath.TO_RAD), 0.2)
         self.motionProxy.setStiffnesses("Head", 1.0)
 
+        time.sleep(1.0)
+
         # Configure arms to the right position
-        self.motionProxy.setStiffnesses("RArm", 0.0)
-        self.motionProxy.setStiffnesses("LArm", 0.0)
-        rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll"]
-        rValues = [(10.3 * almath.TO_RAD), (-0.3 * almath.TO_RAD), (9.5 * almath.TO_RAD), (2.5 * almath.TO_RAD)]
-        rTimes = [0.1, 0.1, 0.1, 0.1]
-        # self.motionProxy.setAngles("RShoulderPitch", (10.3 * almath.TO_RAD), 0.1)
-        # self.motionProxy.setAngles("RShoulderRoll", (-0.3 * almath.TO_RAD), 0.1)
-        # self.motionProxy.setAngles("RElbowYaw", (9.5 * almath.TO_RAD), 0.1)
-        # self.motionProxy.setAngles("RElbowRoll", (2.5 * almath.TO_RAD), 0.1)
+        rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"]
+        rValues = [(10.3 * almath.TO_RAD), (-0.3 * almath.TO_RAD), (9.5 * almath.TO_RAD), (2.5 * almath.TO_RAD), (5.0 * almath.TO_RAD),
+                   (10.3 * almath.TO_RAD), (-0.3 * almath.TO_RAD), (9.5 * almath.TO_RAD), (2.5 * almath.TO_RAD), (5.0 * almath.TO_RAD)]
+        rTimes = [2.0] * 10
         self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
+        self.ledProxy.randomEyes(1.0)
+        self.ledProxy.off("FaceLeds")
 
         # Wait until a board has been identified and complete the relaxed position
+        while not self.vision.find_board( self.take_a_look() ):
+            pass
 
+        # Put the hands down and relax
+        self.ledProxy.randomEyes(1.0)
+        self.ledProxy.off("FaceLeds")
+
+        rValues = [(48.0 * almath.TO_RAD), (1.0 * almath.TO_RAD), (85.0 * almath.TO_RAD), (48.0 * almath.TO_RAD), (5.0 * almath.TO_RAD),
+                   (48.0 * almath.TO_RAD), (1.0 * almath.TO_RAD), (-85.0 * almath.TO_RAD), (-48.0 * almath.TO_RAD), (5.0 * almath.TO_RAD)]
+        self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
+        
+        self.motionProxy.setStiffnesses("RArm", 0.0)
+        self.motionProxy.setStiffnesses("LArm", 0.0)
 
         # Close the initialization process
         self.logger.debug("Initial position assumed, default position set to " + xo_config_base_position + " for efficient stability")

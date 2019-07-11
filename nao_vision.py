@@ -1,11 +1,19 @@
 import cv2 as cv
+import time
 
 class NaoVision:    
 
     def __init__(self, sizes, logging):
         self.camera_size = sizes
+        self.board_visible = False
+
         self.logger = logging
         self.logger.debug("Computer vision initialized with the following camera size: %s",str(self.camera_size))
+
+
+    def find_board(self, image):
+        print( image )
+        return True
 
 
     def cut_image(self, frame, x0, y0, x1, y1):

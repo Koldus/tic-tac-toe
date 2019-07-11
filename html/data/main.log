@@ -1,10 +1,10 @@
-2019-07-11 13:18:19,917;INFO;main.py;Robot's IP address set to 172.16.200.19
-2019-07-11 13:18:19,917;INFO;main.py;Robot's port set to 9559
-2019-07-11 13:18:20,982;DEBUG;nao_control.py;Proxies with Marvin established
-2019-07-11 13:18:22,398;DEBUG;nao_control.py;Connection with camera established
-2019-07-11 13:18:22,399;DEBUG;nao_control.py;Camera Matrix for SolvePnP established: [[888.52, 0.0, 666.72], [0.0, 859.38, 652.96], [0.0, 0.0, 1.0]]
-2019-07-11 13:18:29,203;DEBUG;nao_control.py;A camera snapshot was taken
-2019-07-11 13:18:29,204;DEBUG;nao_vision.py;Computer vision initialized with the following camera size: (1280, 960)
-2019-07-11 13:18:31,785;DEBUG;nao_control.py;Initial position initiated by disabling autonomous life and basic awareness. Body stiffness enabled.
-2019-07-11 13:18:31,969;CRITICAL;main.py;Game exectution failed
-2019-07-11 13:18:31,969;DEBUG;main.py;Error message:  ALMotion::angleInterpolation   ALMotion::angleInterpolation  Body Max Velocity is not respected. RShoulderPitch:              Max velocity  : +8.26797 rad.s-1             Given velocity: +12.2388 rad.s-1
+2019-07-11 15:13:53,258;INFO;main.py;Robot's IP address set to 172.16.200.19
+2019-07-11 15:13:53,258;INFO;main.py;Robot's port set to 9559
+2019-07-11 15:13:54,269;DEBUG;nao_control.py;Proxies with Marvin established
+2019-07-11 15:13:55,725;DEBUG;nao_control.py;Connection with camera established
+2019-07-11 15:13:55,725;DEBUG;nao_control.py;Camera Matrix for SolvePnP established: [[888.52, 0.0, 666.72], [0.0, 859.38, 652.96], [0.0, 0.0, 1.0]]
+2019-07-11 15:14:02,002;DEBUG;nao_control.py;A camera snapshot was taken
+2019-07-11 15:14:02,002;DEBUG;nao_vision.py;Computer vision initialized with the following camera size: (1280, 960)
+2019-07-11 15:14:05,312;DEBUG;nao_control.py;Initial position initiated by disabling autonomous life and basic awareness. Body stiffness enabled.
+2019-07-11 15:14:14,943;DEBUG;nao_control.py;A camera snapshot was taken
+2019-07-11 15:14:23,665;DEBUG;nao_control.py;Initial position assumed, default position set to Crouch for efficient stability
