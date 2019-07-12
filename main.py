@@ -13,11 +13,14 @@ from threading import Timer
 import logging
 
 from config import *
-from nao_control import NaoControl
+from nao_control import NaoControl as NaoControlModule
+from naoqi import ALBroker
 
 # Default parameter
 robotIp = "127.0.0.1"
 port = 9559
+
+NaoControl = None
 
 # Setup the main logger
 logging.basicConfig(filename = 'html/data/main.log', filemode = 'w', format = '%(asctime)s;%(levelname)s;%(filename)s;%(message)s', level = logging.DEBUG)
@@ -45,30 +48,33 @@ logging.basicConfig(filename = 'html/data/main.log', filemode = 'w', format = '%
 def initialize_game():
     
     # Setup robot connection
-    robot = NaoControl(robotIp, port, logging)
+    global NaoControl
+    NaoControl = NaoControlModule("NaoControl", logging)
+    #NaoControl = robot
 
-    if(not robot.init_completed):
+    if(not NaoControl.state.init_completed):
         logging.warning("%s initialization process couldn't be completed and the game ended.", str(xo_config_robot_name))
         logging.debug("init_completed state evaluated as False")
         sys.exit()
 
     # Initialize the game
-    robot.begin_game()
+    NaoControl.begin_game()
 
-    if(not robot.game_ready):
+    if(not NaoControl.state.game_ready):
         logging.warning("The game initialization process couldn't be completed and the application hasended.")
         logging.debug("game_ready state evaluated as False")
         sys.exit()
-    
+    print("Jdu neskoncit")
     # Keep playing until the end
-    while robot.game_ready:
+    while NaoControl.state.game_ready:
+        NaoControl.state.next_placement = 4
         pass
     
-    if( robot.result == 0 ):
+    if( NaoControl.state.result == 0 ):
         logging.info("Game ended: Human won.")
-    elif( robot.result == 1 ):
+    elif( NaoControl.state.result == 1 ):
         logging.info("Game ended: A tie.")
-    elif( robot.result == 2 ):
+    elif( NaoControl.state.result == 2 ):
         logging.info("Game ended: Marvin won.")
     else:
         logging.error("Application ended correctly, but a correct result.")
@@ -96,10 +102,22 @@ if __name__ == '__main__':
         logging.info("Robot's IP address set to %s", str(robotIp))
         logging.info("Robot's port set to %s", str(port))
         
+        myBroker = ALBroker("myBroker",
+            "0.0.0.0",   # listen to anyone
+            0,           # find a free port and use it
+            robotIp,     # parent broker IP
+            port)        # parent broker port
+
         # Initiate the game
         initialize_game()
         
     except Exception as e:
         # Log the errors before game termination
-        logging.fatal("Game exectution failed")
+        print(e)
+        #logging.fatal("Game exectution failed")
         logging.debug('Error message: %s', str(e).replace("\n"," ").replace("\t"," "))
+        
+        global NaoControl
+        if NaoControl != None:
+            NaoControl.relax_left_arm()
+            NaoControl.relax_right_arm()
