@@ -12,7 +12,7 @@ class NaoVision:
 
 
     def find_board(self, image):
-        print( image )
+        time.sleep(1.0)
         return True
 
 
