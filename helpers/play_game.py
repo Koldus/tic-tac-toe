@@ -11,5 +11,3 @@ game = GameControl(logging)
 # player = game.robot
 
 # game.minimax(state, depth, player)
-
-game.play()

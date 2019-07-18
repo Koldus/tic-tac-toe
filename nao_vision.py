@@ -1,4 +1,5 @@
 import cv2 as cv
+import numpy as np
 import time
 
 class NaoVision:    
@@ -11,9 +12,70 @@ class NaoVision:
         self.logger.debug("Computer vision initialized with the following camera size: %s",str(self.camera_size))
 
 
-    def find_board(self, image):
-        time.sleep(1.0)
+    def find_board(self, img):
+        # time.sleep(1.0)
+        
+        # Pre-process the image for blob identification
+        im_transformed = self.image_preprocessing(img)
+
+        # Set up the detector with default parameters.
+        params = cv.SimpleBlobDetector_Params()
+
+        params.filterByColor = True
+        params.blobColor = 255
+
+        params.filterByArea = True
+        params.minArea = 1000
+
+        params.filterByCircularity = False
+        params.minCircularity = 0.5
+
+        params.filterByConvexity = False
+        params.filterByInertia = False
+
+        detector = cv.SimpleBlobDetector_create(params)
+
+        # Detect blobs
+        keypoints = detector.detect(im_transformed)
+        
+        # Draw detected blobs as red circles
+        im_with_keypoints = cv.drawKeypoints(im_transformed, keypoints, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        
+        cv.imshow("Keypoints", im_with_keypoints)
+        cv.waitKey(0)
+        
         return True
+
+
+    
+    ## -------------------------------------------------------------
+    #    SUPPORTING FUNCTIONS
+    ## -------------------------------------------------------------
+
+    def image_preprocessing(self, im_orig):
+        '''
+        Apply several transformation to preprocess image for blob identification.
+        The following filters are applied: convert to grayscale, gaussian blur, adaptive thresholding, bitwise invert and dilating
+        '''
+
+        # Convert to grayscale
+        im_temp = cv.cvtColor(im_orig, cv.COLOR_BGR2GRAY)
+
+        # Apply gaussian blur to smooth the lines by removing noise
+        im_temp = cv.GaussianBlur(im_temp, (11,11), 0)
+
+        # Apply adaptive image thresholding
+        # ... it calculates a mean over a 5x5 window and subtracts 2 from the mean. This is the threshold level for every pixel.
+        im_temp = cv.adaptiveThreshold(im_temp, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, 5, 2)
+
+        # Invert the image
+        im_temp = cv.bitwise_not(im_temp)
+
+        # Dilate the image to complete small cracks
+        im_transformed = cv.dilate(im_temp, np.ones((10,10), np.uint8), iterations = 1)
+
+        return im_transformed
+
 
 
     def cut_image(self, frame, x0, y0, x1, y1):
