@@ -21,10 +21,7 @@ else:
 
 while True:
 
-    depth = len(game.empty_cells(state))
-    evaluate_state = game.is_win(state)
-
-    if depth == 0 or evaluate_state:
+    if not game.evaluate_board(state):
         break
 
     if turn == 1:

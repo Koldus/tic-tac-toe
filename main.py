@@ -25,26 +25,6 @@ NaoControl = None
 # Setup the main logger
 logging.basicConfig(filename = 'html/data/main.log', filemode = 'w', format = '%(asctime)s;%(levelname)s;%(filename)s;%(message)s', level = logging.DEBUG)
 
-# def check_board_status():
-#     current_status = [0,1,2,3,4,5,6,7,8]
-#     last_status = [0,1,2,3,4,5,6,7,8]
-
-#     if game.board == current_status:
-#         logging.info("No change in the board state")
-#         last_status = game.board
-#         t = Timer(2.0, check_board_status)
-#         t.start()
-#     else:
-#         if game.board == last_status:
-#             logging.info("Board state change confirmed. Robot's turn.")
-#             pass
-#         else:
-#             logging.info("Board state change identified, waiting for confirmation.")
-#             last_status = game.board
-#             t = Timer(2.0, check_board_status)
-#             t.start()        
-
-
 def initialize_game():
     
     # Setup robot connection

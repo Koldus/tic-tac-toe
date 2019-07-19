@@ -17,6 +17,19 @@ class GameControl:
 
     def play(self, board):
         
+        if( self.evaluate_board(board) ):
+            depth = len(self.empty_cells(board))
+            move = self.minimax(board, depth, self.robot)
+            self.logger.info('Robot\'s move: ' + str(move) )
+            return move
+
+
+    ## -------------------------------------------------------------
+    #    SUPPORTING FUNCTIONS
+    ## -------------------------------------------------------------
+    
+    def evaluate_board(self, board):
+        
         depth = len(self.empty_cells(board))
         evaluate_state = self.is_win(board)
         if depth == 0 or evaluate_state:
@@ -27,16 +40,9 @@ class GameControl:
             else:
                 self.logger.info('GAME OVER: It\'s a tie')
             return False
-        
-        move = self.minimax(board, depth, self.robot)
-        self.logger.info('Robot\'s move: ' + str(move) )
-        return move
+        return True
 
 
-    ## -------------------------------------------------------------
-    #    SUPPORTING FUNCTIONS
-    ## -------------------------------------------------------------
-    
     def is_win(self, board):
         '''
         Function to determing number of open fields
