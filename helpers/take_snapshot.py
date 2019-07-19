@@ -5,7 +5,7 @@ from PIL import Image
 import os
 
 # callibration config
-nao_ip = "172.16.200.28"
+nao_ip = "marvin.local"
 nao_port = 9559
 nao_camera_id = 1
 

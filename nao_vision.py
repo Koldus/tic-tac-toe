@@ -79,7 +79,7 @@ class NaoVision:
 
 
     def cut_image(self, frame, x0, y0, x1, y1):
-        return frame[x0:y0, x1:y1]
+        return frame[y0:y1, x0:x1]
 
     
     def initialize_board(self):
@@ -99,47 +99,97 @@ class NaoVision:
             "segment9": {"x0": 0, "y0": 0, "x1": 0, "y1": 0},
         }
         print("Trigger start of the game event")
-    
+
+
+    def color_quantization(self, image_segment, K):
+        Z = image_segment.reshape((-1,3))
+
+        # convert to np.float32
+        Z = np.float32(Z)
+
+        # define criteria, number of clusters(K) and apply kmeans()
+        criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+        ret,label,center = cv.kmeans(Z,K,None,criteria,10,cv.KMEANS_RANDOM_CENTERS)
+
+        # Now convert back into uint8, and make original image
+        center = np.uint8(center)
+        res = center[label.flatten()]
+        return res.reshape((image_segment.shape))
+
+
+    def calculate_color_ratio(self, masked_image):
+        blue_count = np.count_nonzero(masked_image)
+        total_count = masked_image.size
+        return 100 * blue_count / total_count
+
 
     def analyze_color(self, image_segment):
-        print("Perform color analysis to identify the dominant color")
-        return "red"
-
-
-    def get_current_state(self):
         
-        # Setup an empty array for the current state
-        current_state = [0,1,2,3,4,5,6,7,8]
+        # Reduce the number of colors
+        image_segment = self.color_quantization(image_segment, 8)
         
-        # Take the camera snapshots
-        frame = self.cam.takePicture()
+        # Convert the image to HSV
+        hsv = cv.cvtColor(image_segment, cv.COLOR_BGR2HSV)
 
-        # Cut the board out of the taken frame
-        frame_cut = self.cut_image(frame, self.image_borders.x0, self.image_borders.y0, self.image_borders.x1, self.image_borders.y1)
+        # Threshold the HSV image to get only blue colors
+        lower_blue = np.array([110,50,50])
+        upper_blue = np.array([130,255,255])
+        blue = cv.inRange(hsv, lower_blue, upper_blue)
+        blue_pt = self.calculate_color_ratio(blue)
+
+        # Declare the blue state if number of pixel is higher than 50%        
+        if blue_pt > 30:
+            return "blue"
+        
+        # Threshold the HSV image to get only blue colors
+        lower_red = np.array([-20, 100, 100])
+        upper_red = np.array([13, 255, 255])
+        red = cv.inRange(hsv, lower_red, upper_red)
+        red_pt = self.calculate_color_ratio(red)
+
+        if red_pt > 30:
+            return "red"
+
+        return False
+
+
+    def get_current_state(self, img):
+        
+        # Setup empty arrays for the current state
+        current_state = [[0,0,0],[0,0,0],[0,0,0]]
+        frames = [[None, None, None],[None, None, None],[None, None, None]]
+
+        # Cut the board and store in a temp variable
+        frames[0][0] = self.cut_image(img, 245, 50, 455, 230)
+        frames[0][1] = self.cut_image(img, 490, 40, 730, 225)
+        frames[0][2] = self.cut_image(img, 765, 40, 987, 220)
+        frames[1][0] = self.cut_image(img, 200, 255, 435, 490)
+        frames[1][1] = self.cut_image(img, 480, 255, 745, 485)
+        frames[1][2] = self.cut_image(img, 780, 250, 1035, 480)
+        frames[2][0] = self.cut_image(img, 140, 515, 400, 815)
+        frames[2][1] = self.cut_image(img, 455, 510, 760, 820)
+        frames[2][2] = self.cut_image(img, 810, 510, 1085, 820)
         
         # Stretch the image to a perfect square
-        print("Stretch the image to a perfect square")
+        self.logger.debug("Image frame cutting completed")
         
-        i=0
-        for segment in self.image_segments:
-            
-            # Retrieve the segment dimensions
-            segment = self.image_segments.get( "segment"+str(i) )
-            
-            # Cut image segment out of the frame cut
-            image_segment = self.cut_image(frame_cut, segment.x0, segment.y0, segment.x1, segment.y1)
-            
-            # Identify color from the image segment
-            identified_color = self.analyze_color(image_segment)
+        r = 0
+        for row in frames:
+            c = 0
+            for cell in row:
+                color = self.analyze_color(cell)
 
-            # Update segment's state based on the results
-            if identified_color == self.my_color:
-                current_state[i] = "x"
-            elif identified_color == self.oponent_color:
-                current_state[i] = "o"
+                if color == 'red':
+                    current_state[r][c] = +1
+                elif color == 'blue':
+                    current_state[r][c] = -1
+
+                c = c + 1
             
-            i = i + 1
+            r = r + 1
+        
+        # Stretch the image to a perfect square
+        self.logger.debug("Current camera state: " + str(current_state))
         
         # Return the current state
-        print(current_state)
         return current_state
