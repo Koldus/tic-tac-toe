@@ -9,20 +9,23 @@ import time
 
 from config import *
 from nao_vision import NaoVision
+from game_control import GameControl
 
 import inspect
 
 memory = None
 
 class State:
+    init_completed = False
+    board_visible = False
+    game_ready = False
+    board = [[0,0,0], [0,0,0], [0,0,0]]
+    result = -1
+    begging_left_arm = False
+    begging_right_arm = False
+    next_placement = -1
     def __init__(self):
-        init_completed = False
-        board_visible = False
-        game_ready = False
-        result = -1
-        begging_left_arm = False
-        begging_right_arm = False
-        next_placement = -1
+        pass
 
 class NaoControl(ALModule):    
     '''
@@ -63,8 +66,9 @@ class NaoControl(ALModule):
         self.configure_camera()
         im = self.take_a_look()
         
-        # Initiate the CV module 
+        # Initiate the CV module and game
         self.vision = NaoVision((im[0], im[1]), logging)
+        self.game = GameControl(logging)
 
         # Assume the initial position and wait for the vision to be enabled
         self.assume_initial_position()
@@ -72,19 +76,79 @@ class NaoControl(ALModule):
         # Confirm the initialization process has been concluded 
         self.state.init_completed = True
 
+    def is_board_changed(self, board_seen):
+        print(board_seen)
+        print(self.state.board)
+        for row in range (0,2):
+            for col in range (0,2):
+                if board_seen[row][col] != self.state.board[row][col]:
+                    self.logger.debug("Compare board [{},{}] old:{} seen:{}".format(row, col, self.state.board[row][col], board_seen[row][col]))
+                    return True
+        return False
+
+
+    def wait_for_my_turn_completion(self):
+        while self.state.my_turn:
+            time.sleep(0.1)
+
+
+    def arm_responsible(self, next_placement):
+        #returns isLeft
+        if next_placement[1] == 0:
+            return True
+        else:
+            return False
+
+    def is_game_finished(self, wins):
+        if wins == -1:
+            self.game_lost()
+            return True
+        elif wins == 1:
+            self.game_won()
+            return True
+        elif wins == 0:
+            self.game_tie()
+            return True
+        return False
+
+    def game_lost(self):
+        self.tts.say("Hmmm. I lost. I am sure I will win next time.")
+
+    def game_won(self):
+        self.tts.say("Yupee. Of course, I won. I always win.")
+    
+    def game_tie(self):
+        self.tts.say("Good play. Your moves were optimal.")
+
+    def wait_for_opponent_token(self):
+        while True:
+            picture = self.take_a_look()
+            board_seen = self.vision.get_current_state(picture)
+            self.logger.debug("board_seen {}".format(board_seen))
+            if self.is_board_changed(board_seen):
+                self.state.my_turn = True
+                return board_seen
+            else:
+                time.sleep(0.5)
+
 
     def begin_game(self):
         self.logger.debug("Game begins")
         self.state.game_ready = True
-        self.tts.say("Let me start begging for tokens")
+        self.tts.say("Lets start the game")
 
-        # beg left
-        time.sleep(2.0)
-        self.beg_for_token_start(False)
+        while True:
+            board_seen = self.wait_for_opponent_token()
+            self.tts.say("Nice play")
+            self.state.next_placement = self.game.play(board_seen)
+            if self.is_game_finished(self.state.next_placement[2]):
+                break
+            self.beg_for_token_start(self.arm_responsible(self.state.next_placement))
+            self.wait_for_my_turn_completion()
+            self.tts.say("Your turn my dear")
 
-        # beg right
-        #ime.sleep(2.0)
-        #self.beg_for_token_start(True)
+        self.tts.say("Do you want to play again? I am finished.")
+
     
     ## -------------------------------------------------------------
     #    SUPPORTING FUNCTIONS
@@ -127,7 +191,7 @@ class NaoControl(ALModule):
         self.ledProxy.off("FaceLeds")
 
         # Wait until a board has been identified and complete the relaxed position
-        self.tts.say("Where is the board? Looking for board.")
+        self.tts.say("Dear lord, I need a board.")
         while not self.vision.find_board( self.take_a_look() ):
             pass
         self.ledProxy.randomEyes(1.0)
@@ -159,7 +223,6 @@ class NaoControl(ALModule):
 
     def onTouched(self, strVarName, value):
         global memory
-        print("JOOOOOOOOOOOO")
         memory.unsubscribeToEvent("TouchChanged", "NaoControl")
 
         for p in value:
@@ -193,16 +256,16 @@ class NaoControl(ALModule):
 
 
     def beg_for_token_finish(self, isLeftArm):
-        print("BEG FINISH")
         self.logger.debug("Begging finish. Left? {}".format(isLeftArm))
         if (isLeftArm == True and self.state.begging_left_arm == True) or (isLeftArm == False and self.state.begging_right_arm == True):
             self.state.begging_left_arm = False
             self.state.begging_left_arm = False
             self.tts.say(self.SAY_TOKEN_GIVEN[random.randrange(len(self.SAY_TOKEN_GIVEN))])
-            self.prepare_for_placement()
+            self.prepare_for_placement(self.state.next_placement)
 
-    def prepare_for_placement(self):
+    def prepare_for_placement(self, placement):
         print("PREPARE")
+        print(placement)
         if self.state.next_placement != -1:
             rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw"]
             # TODO read from movement repository
@@ -217,7 +280,7 @@ class NaoControl(ALModule):
             time.sleep(2.0)
             self.motionProxy.setAngles("RHand", 0.1, 0.1)
             self.relax_right_arm()
-
+        self.state.my_turn = False
 
 
     def configure_camera(self):
