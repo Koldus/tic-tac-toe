@@ -118,9 +118,9 @@ class NaoVision:
 
 
     def calculate_color_ratio(self, masked_image):
-        blue_count = np.count_nonzero(masked_image)
+        color_count = np.count_nonzero(masked_image)
         total_count = masked_image.size
-        return 100 * blue_count / total_count
+        return 100 * color_count / total_count
 
 
     def analyze_color(self, image_segment):
