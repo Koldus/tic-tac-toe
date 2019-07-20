@@ -13,7 +13,12 @@ class NaoVision:
 
 
     def find_board(self, img):
-        # time.sleep(1.0)
+        '''
+        Function that analyzes camera input and searches for the board.
+        returns ... true / false depending on the result
+        '''
+        time.sleep(1.0)
+        return True
         
         # Pre-process the image for blob identification
         im_transformed = self.image_preprocessing(img)
@@ -45,6 +50,54 @@ class NaoVision:
         cv.waitKey(0)
         
         return True
+
+
+    def get_current_state(self, img):
+        '''
+        Perform analysis of the requested image
+        returns ... a current state of the board represented byt the standard array
+                ... 0 represents and empy field
+                ... +1 / -1 represents the two possible states
+        '''
+        
+        # Setup empty arrays for the current state
+        current_state = [[0,0,0],[0,0,0],[0,0,0]]
+        frames = [[None, None, None],[None, None, None],[None, None, None]]
+
+        # Cut the board and store in a temp variable
+        frames[0][0] = self.cut_image(img, 245, 50, 455, 230)
+        frames[0][1] = self.cut_image(img, 490, 40, 730, 225)
+        frames[0][2] = self.cut_image(img, 765, 40, 987, 220)
+        frames[1][0] = self.cut_image(img, 200, 255, 435, 490)
+        frames[1][1] = self.cut_image(img, 480, 255, 745, 485)
+        frames[1][2] = self.cut_image(img, 780, 250, 1035, 480)
+        frames[2][0] = self.cut_image(img, 140, 515, 400, 815)
+        frames[2][1] = self.cut_image(img, 455, 510, 760, 820)
+        frames[2][2] = self.cut_image(img, 810, 510, 1085, 820)
+        
+        # Stretch the image to a perfect square
+        self.logger.debug("Image frame cutting completed")
+        
+        r = 0
+        for row in frames:
+            c = 0
+            for cell in row:
+                color = self.analyze_color(cell, 20)
+
+                if color == 'red':
+                    current_state[r][c] = +1
+                elif color == 'blue':
+                    current_state[r][c] = -1
+
+                c = c + 1
+            
+            r = r + 1
+        
+        # Stretch the image to a perfect square
+        self.logger.debug("Current camera state: " + str(current_state))
+        
+        # Return the current state
+        return current_state
 
 
     
@@ -79,29 +132,16 @@ class NaoVision:
 
 
     def cut_image(self, frame, x0, y0, x1, y1):
+        '''
+        Function that returns an image segment.
+        '''
         return frame[y0:y1, x0:x1]
-
-    
-    def initialize_board(self):
-        print("Search for the board -> memorize the coordinates")
-        print("Stretch the image to a perfect square")
-        self.image_borders = {"x0": 0, "y0": 0, "x1": 0, "y1": 0}
-        print("Identify 9 segments, one for each field of the board -> lock it down")
-        self.image_segments = {
-            "segment1": {"x0": 0, "y0": 0, "x1": 0, "y1": 0},
-            "segment2": {"x0": 0, "y0": 0, "x1": 0, "y1": 0},
-            "segment3": {"x0": 0, "y0": 0, "x1": 0, "y1": 0},
-            "segment4": {"x0": 0, "y0": 0, "x1": 0, "y1": 0},
-            "segment5": {"x0": 0, "y0": 0, "x1": 0, "y1": 0},
-            "segment6": {"x0": 0, "y0": 0, "x1": 0, "y1": 0},
-            "segment7": {"x0": 0, "y0": 0, "x1": 0, "y1": 0},
-            "segment8": {"x0": 0, "y0": 0, "x1": 0, "y1": 0},
-            "segment9": {"x0": 0, "y0": 0, "x1": 0, "y1": 0},
-        }
-        print("Trigger start of the game event")
 
 
     def color_quantization(self, image_segment, K):
+        '''
+        Perform k-means clustering to limit the number of colors
+        '''
         Z = image_segment.reshape((-1,3))
 
         # convert to np.float32
@@ -118,13 +158,23 @@ class NaoVision:
 
 
     def calculate_color_ratio(self, masked_image):
+        '''
+        Calculate the ratio of masked color as a percentage from all pixels.
+        '''
         color_count = np.count_nonzero(masked_image)
         total_count = masked_image.size
         return 100 * color_count / total_count
 
 
-    def analyze_color(self, image_segment):
-        
+    def analyze_color(self, image_segment, threshold):
+        '''
+        Perform color analysis on an image segment in the quantity surprasing the requested threshold.
+        - image_segment ... picture segment to be analyzed
+        - threshold ... numeric value, in percentages required for significant color
+        returns ... False if required colors are not present
+                ... 'blue' / 'red' if color is identified 
+        '''
+
         # Reduce the number of colors
         image_segment = self.color_quantization(image_segment, 8)
         
@@ -138,7 +188,7 @@ class NaoVision:
         blue_pt = self.calculate_color_ratio(blue)
 
         # Declare the blue state if number of pixel is higher than 50%        
-        if blue_pt > 30:
+        if blue_pt > threshold:
             return "blue"
         
         # Threshold the HSV image to get only blue colors
@@ -147,49 +197,7 @@ class NaoVision:
         red = cv.inRange(hsv, lower_red, upper_red)
         red_pt = self.calculate_color_ratio(red)
 
-        if red_pt > 30:
+        if red_pt > threshold:
             return "red"
 
         return False
-
-
-    def get_current_state(self, img):
-        
-        # Setup empty arrays for the current state
-        current_state = [[0,0,0],[0,0,0],[0,0,0]]
-        frames = [[None, None, None],[None, None, None],[None, None, None]]
-
-        # Cut the board and store in a temp variable
-        frames[0][0] = self.cut_image(img, 245, 50, 455, 230)
-        frames[0][1] = self.cut_image(img, 490, 40, 730, 225)
-        frames[0][2] = self.cut_image(img, 765, 40, 987, 220)
-        frames[1][0] = self.cut_image(img, 200, 255, 435, 490)
-        frames[1][1] = self.cut_image(img, 480, 255, 745, 485)
-        frames[1][2] = self.cut_image(img, 780, 250, 1035, 480)
-        frames[2][0] = self.cut_image(img, 140, 515, 400, 815)
-        frames[2][1] = self.cut_image(img, 455, 510, 760, 820)
-        frames[2][2] = self.cut_image(img, 810, 510, 1085, 820)
-        
-        # Stretch the image to a perfect square
-        self.logger.debug("Image frame cutting completed")
-        
-        r = 0
-        for row in frames:
-            c = 0
-            for cell in row:
-                color = self.analyze_color(cell)
-
-                if color == 'red':
-                    current_state[r][c] = +1
-                elif color == 'blue':
-                    current_state[r][c] = -1
-
-                c = c + 1
-            
-            r = r + 1
-        
-        # Stretch the image to a perfect square
-        self.logger.debug("Current camera state: " + str(current_state))
-        
-        # Return the current state
-        return current_state

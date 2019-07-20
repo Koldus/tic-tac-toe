@@ -156,7 +156,8 @@ class NaoControl(ALModule):
 
     def assume_initial_position(self):
         '''
-        Constructor for NaoControl class, takes ip_address and port for comms with the Nao robot and a logger object.
+        Function that disables the autonomous life and lunches the sequence to assume the initial position.
+        The sequence ends when all modules are identified and hands are safely relaxed on the table after the playboard has been identified. 
         '''
         
         ## Shutting down awareness
@@ -204,6 +205,8 @@ class NaoControl(ALModule):
 
         # Close the initialization process
         self.logger.debug("Initial position assumed, default position set to " + xo_config_base_position + " for efficient stability")
+
+
         
     def relax_left_arm(self):
         rNames = ["LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"]
