@@ -2,6 +2,15 @@ import cv2 as cv
 import numpy as np
 import time
 
+'''
+Open tasks:
+- finalize the search for board function
+
+Embedded simplifications:
+- image segments the analysis is performed on are hard-coded, it should be replaced with dymamic values returned from the board analysis
+- optimize the get_current_state function to perform better on difficult lighting conditions
+'''
+
 class NaoVision:    
 
     def __init__(self, sizes, logging):
