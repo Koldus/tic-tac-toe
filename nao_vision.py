@@ -191,8 +191,8 @@ class NaoVision:
         hsv = cv.cvtColor(image_segment, cv.COLOR_BGR2HSV)
 
         # Threshold the HSV image to get only blue colors
-        lower_blue = np.array([110,50,50])
-        upper_blue = np.array([130,255,255])
+        lower_blue = np.array([100,100,50])
+        upper_blue = np.array([135,255,255])
         blue = cv.inRange(hsv, lower_blue, upper_blue)
         blue_pt = self.calculate_color_ratio(blue)
 
@@ -201,10 +201,14 @@ class NaoVision:
             return "blue"
         
         # Threshold the HSV image to get only blue colors
-        lower_red = np.array([-20, 100, 100])
-        upper_red = np.array([13, 255, 255])
-        red = cv.inRange(hsv, lower_red, upper_red)
-        red_pt = self.calculate_color_ratio(red)
+        lower_red1 = np.array([-20, 100, 100])
+        upper_red1 = np.array([20, 255, 255])
+        red1 = cv.inRange(hsv, lower_red1, upper_red1)
+        lower_red2 = np.array([155, 100, 100])
+        upper_red2 = np.array([180, 255, 255])
+        red2 = cv.inRange(hsv, lower_red2, upper_red2)
+        red_combined = red1 + red2
+        red_pt = self.calculate_color_ratio(red_combined)
 
         if red_pt > threshold:
             return "red"
