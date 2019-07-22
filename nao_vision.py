@@ -29,16 +29,23 @@ class NaoVision:
         
         # Pre-process the image for blob identification
         im_transformed = self.image_preprocessing(img)
+        self.logger.debug("Image has been pre-processed for further analysis.")
 
         # Find the biggest blob
         biggest_blob, biggest_blob_size = self.find_biggest_blob(im_transformed)
         if( biggest_blob_size >= 750000 ):
-            
+            self.logger.debug("A sufficiently large blob has been identified. Image will now be cleaned.")
+
             # Remove anything outside the biggest blob
             im_cleaned = self.clean_image(im_transformed, biggest_blob)
+            self.logger.debug("The image has been cleaned. Next line detection analysis will be performed.")
 
-            return True, im_cleaned
+            # Determine if the biggest blob is indeed the 3x3 matrix we need
+            lines, im_lines = self.detect_lines(im_cleaned)
 
+            return True, im_lines
+
+        self.logger.debug("No board identified. The biggest blog size found: %s",str(biggest_blob_size))
         return False, img
 
         
@@ -95,6 +102,45 @@ class NaoVision:
     ## -------------------------------------------------------------
     #    SUPPORTING FUNCTIONS
     ## -------------------------------------------------------------
+
+    def draw_lines(self, line, img):
+        '''
+        Helper function to visualize the board lines
+        '''
+        rho = line[0]
+        theta = line[1]
+        
+        a = np.cos(theta)
+        b = np.sin(theta)
+
+        x0 = a*rho
+        y0 = b*rho
+
+        x1 = int(x0 + 2000*(-b))
+        y1 = int(y0 + 2000*(a))
+        x2 = int(x0 - 2000*(-b))
+        y2 = int(y0 - 2000*(a))
+        
+        img = cv.line(img, (x1, y1), (x2, y2), (255,0,255), 2)
+        return img
+
+
+
+    def detect_lines(self, im_cleaned):
+        '''
+        Perform Hugh Linear Transformation to detect if there are lines in the identified blob
+        '''
+        # Perform hough transformation, optimize threshold to only consider lines that are significant
+        threshold = 500
+        lines = cv.HoughLines(im_cleaned, 1, np.pi/180, threshold)
+
+        # Display lines
+        ret = cv.cvtColor(im_cleaned, cv.COLOR_GRAY2RGB)
+        for line in lines:
+            ret = self.draw_lines(line[0], ret)
+
+        return True, ret
+
 
 
     def find_biggest_blob(self, im_transformed):
