@@ -4,11 +4,10 @@ import time
 
 '''
 Open tasks:
-- finalize the search for board function
+- analyze the biggest blob
 
 Embedded simplifications:
 - image segments the analysis is performed on are hard-coded, it should be replaced with dymamic values returned from the board analysis
-- optimize the get_current_state function to perform better on difficult lighting conditions
 '''
 
 class NaoVision:    
@@ -21,45 +20,28 @@ class NaoVision:
         self.logger.debug("Computer vision initialized with the following camera size: %s",str(self.camera_size))
 
 
+
     def find_board(self, img):
         '''
         Function that analyzes camera input and searches for the board.
-        returns ... true / false depending on the result
+        returns ... True / False depending on the result
         '''
-        time.sleep(1.0)
-        return True
         
         # Pre-process the image for blob identification
         im_transformed = self.image_preprocessing(img)
 
-        # Set up the detector with default parameters.
-        params = cv.SimpleBlobDetector_Params()
+        # Find the biggest blob
+        biggest_blob, biggest_blob_size = self.find_biggest_blob(im_transformed)
+        if( biggest_blob_size >= 750000 ):
+            
+            # Remove anything outside the biggest blob
+            im_cleaned = self.clean_image(im_transformed, biggest_blob)
 
-        params.filterByColor = True
-        params.blobColor = 255
+            return True, im_cleaned
 
-        params.filterByArea = True
-        params.minArea = 1000
+        return False, img
 
-        params.filterByCircularity = False
-        params.minCircularity = 0.5
-
-        params.filterByConvexity = False
-        params.filterByInertia = False
-
-        detector = cv.SimpleBlobDetector_create(params)
-
-        # Detect blobs
-        keypoints = detector.detect(im_transformed)
         
-        # Draw detected blobs as red circles
-        im_with_keypoints = cv.drawKeypoints(im_transformed, keypoints, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        
-        cv.imshow("Keypoints", im_with_keypoints)
-        cv.waitKey(0)
-        
-        return True
-
 
     def get_current_state(self, img):
         '''
@@ -114,6 +96,56 @@ class NaoVision:
     #    SUPPORTING FUNCTIONS
     ## -------------------------------------------------------------
 
+
+    def find_biggest_blob(self, im_transformed):
+        '''
+        Function to identify the biggest blob an its size
+        '''
+
+        # Find image contours
+        ret,thresh = cv.threshold(im_transformed,127,255,0)
+        im_cont, contours, hierarchy = cv.findContours(thresh,cv.RETR_TREE,cv.CHAIN_APPROX_SIMPLE)
+        
+        # Loop over contours to find the biggest area
+        c = 0
+        largest_area = 0
+        largest_contour = 0
+        for contour in contours:
+            area = cv.contourArea(contour)
+            if( area > largest_area ):
+                largest_area = area
+                largest_contour = c
+            c = c + 1
+        
+        # # Render the contours
+        # ret = cv.cvtColor(im_cont, cv.COLOR_GRAY2RGB)
+        # cv.drawContours(ret,contours,largest_contour,(255,0,255), 3)
+        
+        return [contours[largest_contour]], largest_area
+
+
+
+    def clean_image(self, im_transformed, biggest_blob):
+        '''
+        Remove clutter outside the biggest blob
+        '''
+
+        # Copy the thresholded image.
+        stencil = np.zeros(im_transformed.shape).astype(im_transformed.dtype)
+
+        # Create image mask based on the contour of the biggest blob
+        cv.fillPoly(stencil, biggest_blob, [255, 255, 255])
+        
+        # Apply mask on the original image
+        result = cv.bitwise_and(im_transformed, stencil)
+
+        # Erode the image back to balance the original dilation
+        result = cv.erode(result, np.ones((5,5), np.uint8))
+
+        return result
+        
+    
+    
     def image_preprocessing(self, im_orig):
         '''
         Apply several transformation to preprocess image for blob identification.
@@ -134,7 +166,7 @@ class NaoVision:
         im_temp = cv.bitwise_not(im_temp)
 
         # Dilate the image to complete small cracks
-        im_transformed = cv.dilate(im_temp, np.ones((10,10), np.uint8), iterations = 1)
+        im_transformed = cv.dilate(im_temp, np.ones((5,5), np.uint8), iterations = 1)
 
         return im_transformed
 
@@ -145,6 +177,7 @@ class NaoVision:
         Function that returns an image segment.
         '''
         return frame[y0:y1, x0:x1]
+
 
 
     def color_quantization(self, image_segment, K):
@@ -166,6 +199,7 @@ class NaoVision:
         return res.reshape((image_segment.shape))
 
 
+
     def calculate_color_ratio(self, masked_image):
         '''
         Calculate the ratio of masked color as a percentage from all pixels.
@@ -173,6 +207,7 @@ class NaoVision:
         color_count = np.count_nonzero(masked_image)
         total_count = masked_image.size
         return 100 * color_count / total_count
+
 
 
     def analyze_color(self, image_segment, threshold):
