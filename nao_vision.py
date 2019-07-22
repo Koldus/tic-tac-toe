@@ -126,6 +126,50 @@ class NaoVision:
 
 
 
+    def get_points_on_line(self, line, img):
+        rho = line[0]
+        theta = line[1]
+
+        point1 = [0,0]
+        point2 = [0,0]
+
+        if( theta > np.pi*45/180 and theta < np.pi*135/180):
+            # Horizontal lines
+            point1[0] = 0
+            point1[1] = rho / np.sin(theta)
+            point2[0] = img.shape[1]
+            point2[1] = -img.shape[1]/np.tan(theta) + rho/np.sin(theta)
+        else:
+            # Vertical lines
+            point1[0] = rho / np.cos(theta)
+            point1[1] = 0
+            point2[0] = -img.shape[0]/np.tan(theta) + rho/np.cos(theta)
+            point2[1] = img.shape[0]
+
+        return point1, point2
+
+
+
+    def merge_lines(self, lines, img):
+        '''
+        Perform k-means to group similar lines
+        ''' 
+
+        sd = np.std(lines, axis = 0)
+        lines = lines / sd
+
+        criteria = (cv.TERM_CRITERIA_EPS, 10, 1.0)
+        ret,label,center = cv.kmeans(lines,8,None,criteria,10,cv.KMEANS_PP_CENTERS)
+
+        # Reformat the output from k-means
+        merged_lines = []
+        for line in center:
+            merged_lines.append([line])
+
+        return merged_lines * sd
+
+
+
     def detect_lines(self, im_cleaned):
         '''
         Perform Hugh Linear Transformation to detect if there are lines in the identified blob
@@ -133,10 +177,13 @@ class NaoVision:
         # Perform hough transformation, optimize threshold to only consider lines that are significant
         threshold = 500
         lines = cv.HoughLines(im_cleaned, 1, np.pi/180, threshold)
+        
+        # Merge neigboring lines together
+        merged_lines = self.merge_lines(lines, im_cleaned)
 
-        # Display lines
+        # Display merged lines
         ret = cv.cvtColor(im_cleaned, cv.COLOR_GRAY2RGB)
-        for line in lines:
+        for line in merged_lines:
             ret = self.draw_lines(line[0], ret)
 
         return True, ret
