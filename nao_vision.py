@@ -41,9 +41,15 @@ class NaoVision:
             self.logger.debug("The image has been cleaned. Next line detection analysis will be performed.")
 
             # Determine if the biggest blob is indeed the 3x3 matrix we need
-            lines, im_lines = self.detect_lines(im_cleaned)
-
-            return True, im_lines
+            lines, im_lines = self.find_lines(im_cleaned)
+            
+            # Check if the lines consitute a matrix
+            if self.check_matrix(lines, im_lines):
+                self.logger.info('Game board detected! Initiation sequence can now proceed further.')
+                self.lines = lines
+                return True, im_lines
+            
+            return False, im_lines
 
         self.logger.debug("No board identified. The biggest blog size found: %s",str(biggest_blob_size))
         return False, img
@@ -103,6 +109,87 @@ class NaoVision:
     #    SUPPORTING FUNCTIONS
     ## -------------------------------------------------------------
 
+    def split_lines(self, all_lines):
+        '''
+        Split the inserted lines into horizontal and vertical
+        '''
+        h_lines = []
+        v_lines = []
+
+        for line in all_lines:
+            ln = line[0]
+            theta = ln[1]
+            b = np.sin(theta)
+
+            if b >= 0.8:
+                h_lines.append(line)
+            else:
+                v_lines.append(line)
+
+        return h_lines, v_lines
+
+
+    def get_line_intersect(self, line1, line2):
+        '''
+        Finds the intersection of two lines given in Hesse normal form.
+        Returns closest integer pixel locations.
+        '''
+        rho1, theta1 = line1[0]
+        rho2, theta2 = line2[0]
+        A = np.array([
+            [np.cos(theta1), np.sin(theta1)],
+            [np.cos(theta2), np.sin(theta2)]
+        ])
+        b = np.array([[rho1], [rho2]])
+        x0, y0 = np.linalg.solve(A, b)
+        x0, y0 = int(np.round(x0)), int(np.round(y0))
+        return [x0, y0]
+
+
+
+    def check_matrix(self, lines, img):
+        '''
+        Check if hugh lines interesect into a 3x3 matrix
+        Valid matrix consists of 8 lines (4 vertical and 4 horizontal) and each horizontal line crosses exactly four vertical lines.
+        '''
+        valid_matrix = True
+
+        # Make sure there is exactly eight significant lines in the picture
+        if( lines.shape[0] == 8 ):
+            
+            # Split horizontal and vertical lines
+            h_lines, v_lines = self.split_lines(lines)
+            
+            # Make sure there is four of each
+            if len(h_lines) == 4 and len(v_lines) == 4:
+
+                # Make sure each horizontal line intersects precisely 4 vertical lines
+                for h_line in h_lines:
+                    intersect_num = 0
+                    
+                    for v_line in v_lines:
+                        intersect = self.get_line_intersect(h_line, v_line)
+                        
+                        # Intersect is only valid, if the intersection falls within the image dimensions
+                        if img.shape[1] >= intersect[0] >= 0 and img.shape[0] >= intersect[1] >= 0:
+                            intersect_num = intersect_num + 1
+
+                    if intersect_num != 4:
+                        self.logger.debug('Matrix detection failed. One of the horizontal lines has failed to identify four intersects')
+                        valid_matrix = False
+            
+            else:
+                self.logger.debug('Matrix detection failed. Detected ' + str(len(h_lines)) + ' horizontal and ' + str(len(v_lines)) + ' vertical lines')
+                valid_matrix = False
+        
+        else:
+            self.logger.debug('Matrix detection failed. Number of lines detected is: ' + lines.shape[0] )
+            valid_matrix = False
+
+        return valid_matrix
+
+
+    
     def draw_lines(self, line, img):
         '''
         Helper function to visualize the board lines
@@ -170,7 +257,7 @@ class NaoVision:
 
 
 
-    def detect_lines(self, im_cleaned):
+    def find_lines(self, im_cleaned):
         '''
         Perform Hugh Linear Transformation to detect if there are lines in the identified blob
         '''
@@ -186,7 +273,7 @@ class NaoVision:
         for line in merged_lines:
             ret = self.draw_lines(line[0], ret)
 
-        return True, ret
+        return merged_lines, ret
 
 
 
