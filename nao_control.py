@@ -6,6 +6,8 @@ import cv2
 import random
 import functools
 import time
+import motion
+import sys
 
 from config import *
 from nao_vision import NaoVision
@@ -173,6 +175,11 @@ class NaoControl(ALModule):
             self.postureProxy.wait(id, 0)
 
 
+#        self.tts.say("ok")
+#        self.prepare_for_placement(1)
+#        self.tts.say("done")
+#        sys.exit()
+
         # Configure head to the right position
         self.motionProxy.setStiffnesses("Head", 1.0)
         hNames = ["HeadPitch", "HeadYaw"]
@@ -194,7 +201,9 @@ class NaoControl(ALModule):
         # Wait until a board has been identified and complete the relaxed position
         self.tts.say("Dear lord, I need a board.")
         while not self.vision.find_board( self.take_a_look() ):
+            time.sleep(1.0)
             pass
+        self.logger.debug("Board found")
         self.ledProxy.randomEyes(1.0)
         self.ledProxy.off("FaceLeds")
         self.tts.say("I got it.")
@@ -269,13 +278,23 @@ class NaoControl(ALModule):
     def prepare_for_placement(self, placement):
         print("PREPARE")
         print(placement)
-        if self.state.next_placement != -1:
-            rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw"]
+        if placement != -1:
             # TODO read from movement repository
-            rValues = [rad(40.7),       rad(11.4),       rad(21.3),   rad(55.3),    rad(-34.4)]
-            rTimes = [2.0] * 5
+            #rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw"]
+            #rValues = [rad(40.7),       rad(11.4),       rad(21.3),   rad(55.3),    rad(-34.4)]
+            #rTimes = [2.0] * 5
+            #self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
+
+            #zebrej
+            self.relax_left_arm()
+            self.motionProxy.setStiffnesses("RArm", 1.0)
+            self.state.begging_right_arm = True
+            self.state.begging_left_arm = False
+            rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "RHand"]
+            rValues = [rad(-14.1),      rad(-24.0),      rad(77.9),   rad(21.1),    rad(104.5),  0.53]
+            rTimes = [2.0] * 6
             self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
-            time.sleep(1.0)
+            time.sleep(3.0)
 
             # Open hand
             self.motionProxy.setStiffnesses("RArm", 1.0)
