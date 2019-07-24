@@ -33,7 +33,7 @@ class NaoVision:
 
         # Find the biggest blob
         biggest_blob, biggest_blob_size = self.find_biggest_blob(im_transformed)
-        if( biggest_blob_size >= 750000 ):
+        if( biggest_blob_size >= 650000 ):
             self.logger.debug("A sufficiently large blob has been identified. Image will now be cleaned.")
 
             # Remove anything outside the biggest blob

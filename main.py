@@ -50,6 +50,9 @@ def initialize_game():
         NaoControl.state.next_placement = 4
         pass
     
+    # Unsubscribe from the camera feed
+    NaoControl.cameraProxy.unsubscribe(NaoControl.video_client)
+
     if( NaoControl.state.result == 0 ):
         logging.info("Game ended: Human won.")
     elif( NaoControl.state.result == 1 ):
@@ -101,3 +104,4 @@ if __name__ == '__main__':
         if NaoControl != None:
             NaoControl.relax_left_arm()
             NaoControl.relax_right_arm()
+            NaoControl.cameraProxy.unsubscribe(NaoControl.video_client)

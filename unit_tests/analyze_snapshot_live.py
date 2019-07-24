@@ -32,12 +32,9 @@ try:
         
         frame = np.asarray(bytearray(nao_image[6]), dtype=np.uint8)
         frame = frame.reshape((nao_image[1],nao_image[0],3))
-
-        # Or convert to a PIL Image if it doesn't work
-        # frame.data = bytearray(nao_image[6])
         frame = frame[...,::-1]
 
-        board_found, result = vision.find_board(frame)
+        board_found, result, blob_size = vision.find_board(frame)
 
         cv.imshow("Output from the image analysis", result)
         cv.waitKey(0)

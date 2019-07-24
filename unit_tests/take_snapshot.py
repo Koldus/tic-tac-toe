@@ -26,6 +26,6 @@ im_array = nao_image[6]
 im = Image.frombytes("RGB", (im_width, im_height), im_array)
 
 # Save the image.
-im.save(os.path.join("helpers", "snapshot.jpg"), "JPEG")
+im.save(os.path.join("unit_tests", "snapshot.jpg"), "JPEG")
 
 im.show()

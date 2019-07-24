@@ -40,9 +40,10 @@ class NaoControl(ALModule):
     ## -------------------------------------------------------------
     #    MAIN FUNCTIONS
     ## -------------------------------------------------------------
+
     def __init__(self, name, logging):        
         '''
-        Constructor for NaoControl class, takes ip_address, port and name for comms with the Nao robot and a logger object.
+        Constructor for NaoControl class - establishes necessary proxies with Nao robot and instantiates the game and vision objects.
         '''
         global NaoControl
 
@@ -77,6 +78,8 @@ class NaoControl(ALModule):
 
         # Confirm the initialization process has been concluded 
         self.state.init_completed = True
+
+
 
     def is_board_changed(self, board_seen):
         print(board_seen)
@@ -174,7 +177,6 @@ class NaoControl(ALModule):
             id = self.postureProxy.goToPosture(xo_config_base_position, 1.0)
             self.postureProxy.wait(id, 0)
 
-
 #        self.tts.say("ok")
 #        self.prepare_for_placement(1)
 #        self.tts.say("done")
@@ -205,8 +207,8 @@ class NaoControl(ALModule):
         while True:
             found, img, blob_size = self.vision.find_board( self.take_a_look())
             #-30 nahore, 45 dole
-            # 0        , 800000
-            arm_pitch = (blob_size/800000)*75 - 30
+            # 0        , 750000
+            arm_pitch = (blob_size/750000)*75 - 30
             print("arm pitch {}".format(arm_pitch))
             self.motionProxy.setAngles("LShoulderPitch", rad(arm_pitch), 0.1)
             self.motionProxy.setAngles("RShoulderPitch", rad(arm_pitch), 0.1)
@@ -321,13 +323,14 @@ class NaoControl(ALModule):
 
     def configure_camera(self):
         '''
-        configure_camera method is used to setup the camera proxy and camera matrix
+        configure_camera method is used to setup the camera proxy, subscribe to camera stream and establish the camera matrix.
         '''
         
         # Setup camera proxy to be used for image retrievals for later processing
         self.cameraProxy.setActiveCamera(xo_config_camera_id)
+        self.video_client = self.cameraProxy.subscribe("python_client", 3, 11, 5)
 
-        self.logger.debug("Connection with camera established")
+        self.logger.debug("Connection with camera established + video_client subscription configured.")
         
         # Camera Matrix will later be used for solvePnP algorithm
         self.cameraMatrix = np.zeros((3,3), dtype=np.float64)
@@ -342,14 +345,16 @@ class NaoControl(ALModule):
 
     
     def take_a_look(self):
-        video_client = self.cameraProxy.subscribe("python_client", 3, 11, 5)
-        nao_image = self.cameraProxy.getImageRemote(video_client)
-        self.cameraProxy.unsubscribe(video_client)
+        '''
+        take_a_look is used to take a snapshot from the camera view and format for later processing.
+        '''
+        nao_image = self.cameraProxy.getImageRemote(self.video_client)
+        
         frame = np.asarray(bytearray(nao_image[6]), dtype=np.uint8)
         frame = frame.reshape((nao_image[1],nao_image[0],3))
         frame = frame[...,::-1]
 
-        self.logger.debug("A camera snapshot was taken")
+        self.logger.debug("A camera snapshot was taken.")
         return frame
 
 
