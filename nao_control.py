@@ -183,27 +183,41 @@ class NaoControl(ALModule):
         # Configure head to the right position
         self.motionProxy.setStiffnesses("Head", 1.0)
         hNames = ["HeadPitch", "HeadYaw"]
-        hValues = [(29 * almath.TO_RAD), (0.0 * almath.TO_RAD)]
+        hValues = [(28 * almath.TO_RAD), (0.0 * almath.TO_RAD)]
         hTimes = [2.0] * 2
         self.motionProxy.angleInterpolation(hNames, hValues, hTimes, True)
 
         time.sleep(1.0)
+        self.tts.say("Dear lord, I need a board.")
 
         # Configure arms to the right position
         rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"]
-        rValues = [rad(10.3), rad(-0.3), rad(9.5), rad(2.5), rad(5.0),
-                   rad(10.3), rad(-0.3), rad(9.5), rad(2.5), rad(5.0)]
+        rValues = [rad(-30.0), rad(1.0), rad(85.0), rad(48.0), rad(5.0),
+                   rad(-30.0), rad(1.0), rad(-85.0), rad(-48.0), rad(5.0)]
         rTimes = [2.0] * 10
         self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
         self.ledProxy.randomEyes(1.0)
         self.ledProxy.off("FaceLeds")
 
         # Wait until a board has been identified and complete the relaxed position
-        self.tts.say("Dear lord, I need a board.")
-        while not self.vision.find_board( self.take_a_look() ):
-            time.sleep(1.0)
-            pass
-        self.logger.debug("Board found")
+        found = False
+        found_cnt = 0
+        while True:
+            found, img, blob_size = self.vision.find_board( self.take_a_look())
+            #-30 nahore, 45 dole
+            # 0        , 800000
+            arm_pitch = (blob_size/800000)*75 - 30
+            print("arm pitch {}".format(arm_pitch))
+            self.motionProxy.setAngles("LShoulderPitch", rad(arm_pitch), 0.1)
+            self.motionProxy.setAngles("RShoulderPitch", rad(arm_pitch), 0.1)
+
+            if found:
+                self.logger.debug("Board found {}".format(found))
+                found_cnt = found_cnt + 1
+            if found_cnt >= 3:
+                break
+        self.logger.info("Board found and stabilized")
+
         self.ledProxy.randomEyes(1.0)
         self.ledProxy.off("FaceLeds")
         self.tts.say("I got it.")
@@ -331,9 +345,12 @@ class NaoControl(ALModule):
         video_client = self.cameraProxy.subscribe("python_client", 3, 11, 5)
         nao_image = self.cameraProxy.getImageRemote(video_client)
         self.cameraProxy.unsubscribe(video_client)
+        frame = np.asarray(bytearray(nao_image[6]), dtype=np.uint8)
+        frame = frame.reshape((nao_image[1],nao_image[0],3))
+        frame = frame[...,::-1]
 
         self.logger.debug("A camera snapshot was taken")
-        return nao_image
+        return frame
 
 
     def find_target_position(self, section_id):

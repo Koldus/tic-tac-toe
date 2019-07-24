@@ -47,12 +47,12 @@ class NaoVision:
             if self.check_matrix(lines, im_lines):
                 self.logger.info('Game board detected! Initiation sequence can now proceed further.')
                 self.lines = lines
-                return True, im_lines
+                return True, im_lines, biggest_blob_size
             
-            return False, im_lines
+            return False, im_lines, biggest_blob_size
 
         self.logger.debug("No board identified. The biggest blog size found: %s",str(biggest_blob_size))
-        return False, img
+        return False, img, biggest_blob_size
 
         
 
