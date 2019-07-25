@@ -17,11 +17,23 @@ class GameControl:
 
     def play(self, board):
         
-        if( self.evaluate_board(board) ):
+        # Check if the game hasn't ended by human's move
+        cur_status = self.evaluate_board(board)
+        if cur_status == None:
             depth = len(self.empty_cells(board))
             move = self.minimax(board, depth, self.robot)
             self.logger.info('Robot\'s move: ' + str(move) )
+            
+            # print(board)
+            board[move[0]][move[1]] = self.robot
+            # print(board)
+
+            move[2] = self.evaluate_board(board)
+            # self.logger.info('Robot\'s move: ' + str(move) )
+
             return move
+        else:
+            return [None, None, cur_status]
 
 
     ## -------------------------------------------------------------
@@ -29,18 +41,15 @@ class GameControl:
     ## -------------------------------------------------------------
     
     def evaluate_board(self, board):
-        
         depth = len(self.empty_cells(board))
         evaluate_state = self.is_win(board)
         if depth == 0 or evaluate_state:
             if evaluate_state == self.max:
-                self.logger.info('GAME OVER: Robot wins')
+                return self.robot
             elif evaluate_state == self.min:
-                self.logger.info('GAME OVER: Human wins')
-            else:
-                self.logger.info('GAME OVER: It\'s a tie')
-            return False
-        return True
+                return self.human
+            return self.tie
+        return None
 
 
     def is_win(self, board):
