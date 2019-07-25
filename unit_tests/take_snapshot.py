@@ -13,7 +13,7 @@ nao_camera_id = 1
 cam_proxy = ALProxy("ALVideoDevice", nao_ip, nao_port)
 cam_proxy.setActiveCamera(1)
 
-video_client = cam_proxy.subscribe("python_client", 3, 11, 5)
+video_client = cam_proxy.subscribeCamera("python_client", 1, 2, 11, 5)
 nao_image = cam_proxy.getImageRemote(video_client)
 cam_proxy.unsubscribe(video_client)
 

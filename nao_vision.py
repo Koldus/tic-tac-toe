@@ -34,7 +34,7 @@ class NaoVision:
 
         # Find the biggest blob
         biggest_blob, biggest_blob_size = self.find_biggest_blob(im_transformed)
-        if( biggest_blob_size >= 650000 ):
+        if( biggest_blob_size >= 150000 ):
             self.logger.debug("A sufficiently large blob has been identified. Image will now be cleaned.")
 
             # Remove anything outside the biggest blob
@@ -42,8 +42,8 @@ class NaoVision:
             self.logger.debug("The image has been cleaned. Next line detection analysis will be performed.")
 
             # Determine if the biggest blob is indeed the 3x3 matrix we need
-            lines, im_lines = self.find_lines(im_cleaned)
-            
+            lines, im_lines = self.find_lines(im_cleaned, 200)
+
             # Check if the lines consitute a matrix
             if self.check_matrix(lines, im_lines):
                 self.logger.debug('Game board detected.')
@@ -61,7 +61,7 @@ class NaoVision:
         Takes current board position and freezes it in memory.
         '''
         # Retrieve ordered horizontal and vertical lines
-        lines, im_lines = self.find_lines(img)
+        lines, im_lines = self.find_lines(img, 200)
         h_lines, v_lines = self.split_lines(lines)
 
         # Order lines and pick to find the outer edges
@@ -380,12 +380,11 @@ class NaoVision:
 
 
 
-    def find_lines(self, im_cleaned):
+    def find_lines(self, im_cleaned, threshold):
         '''
         Perform Hugh Linear Transformation to detect if there are lines in the identified blob
         '''
         # Perform hough transformation, optimize threshold to only consider lines that are significant
-        threshold = 500
         lines = cv.HoughLines(im_cleaned, 1, np.pi/180, threshold)
         
         # Merge neigboring lines together

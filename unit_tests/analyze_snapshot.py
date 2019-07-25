@@ -6,12 +6,15 @@ import time
 
 logging.basicConfig(format = '%(asctime)s;%(levelname)s;%(filename)s;%(message)s', level = logging.DEBUG)
 
-i = 2
+i = 1
 while True:
-    im = cv.imread("unit_tests/snapshot_" + str(i) + ".jpg")
+    im = cv.imread("unit_tests/snapshot_sm_" + str(i) + ".jpg")
     vision = NaoVision((im.shape[0], im.shape[1]), logging)
 
+    start = time.time()
     board_found, result, blob_size = vision.find_board(im)
+    end = time.time()
+    print ('Find board function: ' + str( end - start ) )
 
     if board_found:
         print('BOARD FOUND')
@@ -29,7 +32,7 @@ while True:
     cv.waitKey(0)
 
     i = i + 1
-    if i > 2:
+    if i > 1:
         break
 
 print('Analysis ended')
