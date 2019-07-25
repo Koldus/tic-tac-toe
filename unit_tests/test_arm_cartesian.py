@@ -10,8 +10,8 @@ import motion
 import sys
 
 import argparse
-import logging
 from naoqi import ALBroker
+import logging
 
 from config import *
 # from nao_vision import NaoVision
@@ -83,8 +83,8 @@ class NaoControl(ALModule):
         # Confirm the initialization process has been concluded 
         # self.state.init_completed = True
 
-        beg_for_token_start(False)
-        prepare_for_placement(1)
+        self.beg_for_token_start(False)
+        self.prepare_for_placement(4)
 
 
 
@@ -105,68 +105,9 @@ class NaoControl(ALModule):
         ## Shutting down awareness
         self.autoProxy.setState("disabled")
         self.awarenessProxy.stopAwareness()
-        # self.motionProxy.stiffnessInterpolation("LArm", 1.0, 1.0)
-        self.motionProxy.stiffnessInterpolation("RArm", 1.0, 1.0)
+        self.motionProxy.stiffnessInterpolation("Body", 1.0, 1.0)
 
         self.logger.debug("Initial position initiated by disabling autonomous life and basic awareness. Body stiffness enabled.")
-        pass
-
-        # Setup the body posture with you
-        # if( self.postureProxy.getPosture() != xo_config_base_position ):
-            # id = self.postureProxy.goToPosture(xo_config_base_position, 1.0)
-            # self.postureProxy.wait(id, 0)
-
-        # Configure head to the right position
-        # self.motionProxy.setStiffnesses("Head", 1.0)
-        # hNames = ["HeadPitch", "HeadYaw"]
-        # hValues = [(28 * almath.TO_RAD), (0.0 * almath.TO_RAD)]
-        # hTimes = [2.0] * 2
-        # self.motionProxy.angleInterpolation(hNames, hValues, hTimes, True)
-
-        # time.sleep(1.0)
-        # self.tts.say("Dear lord, I need a board.")
-
-        # Configure arms to the right position
-        rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"]
-        rValues = [rad(-30.0), rad(1.0), rad(85.0), rad(48.0), rad(5.0),
-                   rad(-30.0), rad(1.0), rad(-85.0), rad(-48.0), rad(5.0)]
-        rTimes = [2.0] * 10
-        self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
-        self.ledProxy.randomEyes(1.0)
-        self.ledProxy.off("FaceLeds")
-
-        # Wait until a board has been identified and complete the relaxed position
-        found = False
-        found_cnt = 0
-        while True:
-            found, img, blob_size = self.vision.find_board( self.take_a_look())
-            #-30 nahore, 45 dole
-            # 0        , 750000
-            arm_pitch = (blob_size/750000)*75 - 30
-            print("arm pitch {}".format(arm_pitch))
-            self.motionProxy.setAngles("LShoulderPitch", rad(arm_pitch), 0.1)
-            self.motionProxy.setAngles("RShoulderPitch", rad(arm_pitch), 0.1)
-
-            if found:
-                self.logger.debug("Board found {}".format(found))
-                found_cnt = found_cnt + 1
-            if found_cnt >= 3:
-                self.vision.fix_board_position(img)
-                break
-        
-        self.logger.info("Game board detected and stabilized! Initiation sequence can now proceed further.")
-
-        self.ledProxy.randomEyes(1.0)
-        self.ledProxy.off("FaceLeds")
-        self.tts.say("I got it.")
-
-        # Put the hands down and relax
-        self.relax_left_arm()
-        self.relax_right_arm()
-
-        # Close the initialization process
-        self.logger.debug("Initial position assumed, default position set to " + xo_config_base_position + " for efficient stability")
-
 
         
     def relax_left_arm(self):
@@ -198,16 +139,16 @@ class NaoControl(ALModule):
 
     def beg_for_token_start(self, isLeftArm):
         self.logger.debug("Begging start. Left? {}".format(isLeftArm))
-        self.motionProxy.setStiffnesses("RArm", 1.0)
-        self.motionProxy.setStiffnesses("LArm", 1.0)
         if isLeftArm:
             # left arm
+            self.motionProxy.setStiffnesses("LArm", 1.0)
             self.state.begging_left_arm = True
             self.state.begging_right_arm = False
             rNames = ["LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw", "LHand"]
             rValues = [rad(-14.1),      rad(24.0),       rad(-77.9),  rad(-21.1),   rad(-104.5), 0.53]
         else:
             # right arm
+            self.motionProxy.setStiffnesses("RArm", 1.0)
             self.state.begging_right_arm = True
             self.state.begging_left_arm = False
             rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "RHand"]
@@ -215,8 +156,8 @@ class NaoControl(ALModule):
 
         rTimes = [2.0] * 6
         self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
-        global memory
-        memory.subscribeToEvent("TouchChanged", "NaoControl", "onTouched")
+        # global memory
+        # memory.subscribeToEvent("TouchChanged", "NaoControl", "onTouched")
 
 
     def beg_for_token_finish(self, isLeftArm):
@@ -228,8 +169,7 @@ class NaoControl(ALModule):
             self.prepare_for_placement(self.state.next_placement)
 
     def prepare_for_placement(self, placement):
-        print("PREPARE")
-        print(placement)
+        self.logger.debug("PREPARE to placing to {}".format(placement))
         if placement != -1:
             # TODO read from movement repository
             #rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw"]
@@ -237,13 +177,12 @@ class NaoControl(ALModule):
             #rTimes = [2.0] * 5
             #self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
 
-            #zebrej
-            self.relax_left_arm()
+            #prepare to move to placement position
             self.motionProxy.setStiffnesses("RArm", 1.0)
             self.state.begging_right_arm = True
             self.state.begging_left_arm = False
             rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "RHand"]
-            rValues = [rad(-14.1),      rad(-24.0),      rad(77.9),   rad(21.1),    rad(104.5),  0.53]
+            rValues = [rad(5.7),      rad(4.7),      rad(-16.4) ,     rad(63.1),    rad(9.6),  0.53]
             rTimes = [2.0] * 6
             self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
             time.sleep(3.0)
@@ -275,6 +214,8 @@ if __name__ == '__main__':
     robotIp = args.ip
     port = args.port
     naoControl = None
+
+    logging.basicConfig(format = '%(asctime)s;%(levelname)s;%(filename)s;%(message)s', level = logging.DEBUG)
 
     try:
         logging.info("Robot's IP address set to %s", str(robotIp))
