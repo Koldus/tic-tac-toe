@@ -143,16 +143,22 @@ class NaoControl(ALModule):
         self.tts.say("Lets start the game")
 
         while True:
-            board_seen = self.wait_for_opponent_token()
+            board_seen = self.wait_for_opponent_token() #image
             self.tts.say("Nice play")
-            self.state.next_placement = self.game.play(board_seen)
+            self.state.next_placement = self.game.play(board_seen)  # [row, col, state]  state 0:tie, 1:robotwins, -1:humanwins, None: continue
+
+            if (self.state.next_placement[0] != None and self.state.next_placement[1] != None):
+                # marvin makes a move
+                self.beg_for_token_start(self.arm_responsible(self.state.next_placement))
+                self.wait_for_my_turn_completion()
+
             if self.is_game_finished(self.state.next_placement[2]):
                 break
-            self.beg_for_token_start(self.arm_responsible(self.state.next_placement))
-            self.wait_for_my_turn_completion()
-            self.tts.say("Your turn my dear")
 
-        self.tts.say("Do you want to play again? I am finished.")
+            self.tts.say("Your turn my dear")
+        
+        self.state.result = game_result
+
 
     
     ## -------------------------------------------------------------
