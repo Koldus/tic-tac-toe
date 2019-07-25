@@ -45,9 +45,8 @@ class NaoVision:
             
             # Check if the lines consitute a matrix
             if self.check_matrix(lines, im_lines):
-                self.logger.info('Game board detected! Initiation sequence can now proceed further.')
-                self.lines = lines
-                return True, im_lines, biggest_blob_size
+                self.logger.debug('Game board detected.')
+                return True, im_cleaned, biggest_blob_size
             
             return False, im_lines, biggest_blob_size
 
@@ -55,6 +54,34 @@ class NaoVision:
         return False, img, biggest_blob_size
 
         
+
+    def fix_board_position(self, img):
+        '''
+        Takes current board position and freezes it in memory.
+        '''
+        # Retrieve ordered horizontal and vertical lines
+        lines, im_lines = self.find_lines(img)
+        h_lines, v_lines = self.split_lines(lines)
+
+        # Order lines and pick to find the outer edges
+        h_lines_ordered = self.order_lines(h_lines, True)
+        v_lines_ordered = self.order_lines(v_lines, False)
+
+        # Store image corners in memory
+        tl, tr, bl, br = self.find_corners(h_lines_ordered, v_lines_ordered)
+        self.corners = [[tl, tr],[bl, br]]
+
+        # im_lines = cv.circle(im_lines, tl, 15, (255,0,0), -1)
+        # im_lines = cv.circle(im_lines, tr, 15, (255,0,0), -1)
+        # im_lines = cv.circle(im_lines, bl, 15, (255,0,0), -1)
+        # im_lines = cv.circle(im_lines, br, 15, (255,0,0), -1)
+        
+        # Store image segments dimensions in memory
+        self.dimensions = self.find_all_segments(h_lines_ordered, v_lines_ordered)
+
+        return(im_lines)
+
+
 
     def get_current_state(self, img):
         '''
@@ -69,16 +96,26 @@ class NaoVision:
         frames = [[None, None, None],[None, None, None],[None, None, None]]
 
         # Cut the board and store in a temp variable
-        frames[0][0] = self.cut_image(img, 245, 50, 455, 230)
-        frames[0][1] = self.cut_image(img, 490, 40, 730, 225)
-        frames[0][2] = self.cut_image(img, 765, 40, 987, 220)
-        frames[1][0] = self.cut_image(img, 200, 255, 435, 490)
-        frames[1][1] = self.cut_image(img, 480, 255, 745, 485)
-        frames[1][2] = self.cut_image(img, 780, 250, 1035, 480)
-        frames[2][0] = self.cut_image(img, 140, 515, 400, 815)
-        frames[2][1] = self.cut_image(img, 455, 510, 760, 820)
-        frames[2][2] = self.cut_image(img, 810, 510, 1085, 820)
-        
+        # frames[0][0] = self.cut_image(img, [245, 50, 455, 230])
+        # frames[0][1] = self.cut_image(img, [490, 40, 730, 225])
+        # frames[0][2] = self.cut_image(img, [765, 40, 987, 220])
+        # frames[1][0] = self.cut_image(img, [200, 255, 435, 490])
+        # frames[1][1] = self.cut_image(img, [480, 255, 745, 485])
+        # frames[1][2] = self.cut_image(img, [780, 250, 1035, 480])
+        # frames[2][0] = self.cut_image(img, [140, 515, 400, 815])
+        # frames[2][1] = self.cut_image(img, [455, 510, 760, 820])
+        # frames[2][2] = self.cut_image(img, [810, 510, 1085, 820])
+
+        c = 0
+        while c < 3:
+            r = 0
+            while r < 3:
+                # Select only relevant points, tl and br
+                points = self.dimensions[c][r]
+                frames[c][r] = self.cut_image(img, [])
+                r = r + 1
+            c = c + 1
+
         # Stretch the image to a perfect square
         self.logger.debug("Image frame cutting completed")
         
@@ -109,6 +146,70 @@ class NaoVision:
     #    SUPPORTING FUNCTIONS
     ## -------------------------------------------------------------
 
+    def find_all_segments(self, h_lines, v_lines):
+        c = 0
+        segments = []
+        while c < 3:
+            
+            column = []
+            r = 0
+            while r < 3:
+                # Select only related lines
+                h_lines_subset = [ h_lines[r], h_lines[r+1] ]
+                v_lines_subset = [ v_lines[c], v_lines[c+1] ]
+                tl, tr, bl, br = self.find_corners(h_lines_subset, v_lines_subset)
+
+                column.append([tl, tr, bl, br])
+                r = r + 1
+
+            segments.append(column)
+            c = c + 1
+        
+        return segments
+
+
+    def find_corners(self, h_lines, v_lines):
+        '''
+        Convert outer edges to four corner points.
+        '''
+        tl = self.get_line_intersect( h_lines[0], v_lines[0] )
+        tr = self.get_line_intersect( h_lines[0], v_lines[-1] )
+        br = self.get_line_intersect( h_lines[-1], v_lines[-1] )
+        bl = self.get_line_intersect( h_lines[-1], v_lines[0] )
+        return tl, tr, bl, br
+
+
+    
+    def order_lines(self, lines, horizontal):
+        '''
+        Takes in lines and return them order from closest to the most distant from the origin. 
+        '''
+        simple_array = []
+        for line in lines:
+            rho, theta = line[0]
+
+            # Calculate intersect with the respective axis
+            if horizontal:
+                intersect = rho * np.sin(theta)
+            else:
+                intersect = rho * np.cos(theta)
+            
+            # Added into the simple array for ordering
+            simple_array.append((rho, theta, intersect))
+
+        # Add labels and order lines
+        structured_array = np.array(simple_array, dtype=[('rho', float), ('theta', float), ('intersect', float)])
+        ordered_array = np.sort(structured_array, order='intersect')
+
+        # Re-format the outcome into OpenCV line structure
+        final_array = []
+        for line in ordered_array:
+            final_array.append([[line[0], line[1]]])
+
+        return final_array
+
+
+    
     def split_lines(self, all_lines):
         '''
         Split the inserted lines into horizontal and vertical
@@ -127,6 +228,7 @@ class NaoVision:
                 v_lines.append(line)
 
         return h_lines, v_lines
+        
 
 
     def get_line_intersect(self, line1, line2):
@@ -143,7 +245,7 @@ class NaoVision:
         b = np.array([[rho1], [rho2]])
         x0, y0 = np.linalg.solve(A, b)
         x0, y0 = int(np.round(x0)), int(np.round(y0))
-        return [x0, y0]
+        return (x0, y0)
 
 
 
@@ -240,8 +342,7 @@ class NaoVision:
     def merge_lines(self, lines, img):
         '''
         Perform k-means to group similar lines
-        ''' 
-
+        '''
         sd = np.std(lines, axis = 0)
         lines = lines / sd
 
@@ -352,10 +453,11 @@ class NaoVision:
 
 
 
-    def cut_image(self, frame, x0, y0, x1, y1):
+    def cut_image(self, frame, segment_dim):
         '''
         Function that returns an image segment.
         '''
+        x0, y0, x1, y1 = segment_dim
         return frame[y0:y1, x0:x1]
 
 

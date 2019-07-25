@@ -217,8 +217,10 @@ class NaoControl(ALModule):
                 self.logger.debug("Board found {}".format(found))
                 found_cnt = found_cnt + 1
             if found_cnt >= 3:
+                self.vision.fix_board_position(img)
                 break
-        self.logger.info("Board found and stabilized")
+        
+        self.logger.info("Game board detected and stabilized! Initiation sequence can now proceed further.")
 
         self.ledProxy.randomEyes(1.0)
         self.ledProxy.off("FaceLeds")
