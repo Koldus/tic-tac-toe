@@ -82,12 +82,11 @@ class NaoControl(ALModule):
 
 
     def is_board_changed(self, board_seen):
-        print(board_seen)
-        print(self.state.board)
-        for row in range (0,2):
-            for col in range (0,2):
+        for row in range (3):
+            for col in range (3):
                 if board_seen[row][col] != self.state.board[row][col]:
                     self.logger.debug("Compare board [{},{}] old:{} seen:{}".format(row, col, self.state.board[row][col], board_seen[row][col]))
+                    self.state.board = board_seen
                     return True
         return False
 
@@ -140,7 +139,7 @@ class NaoControl(ALModule):
     def begin_game(self):
         self.logger.debug("Game begins")
         self.state.game_ready = True
-        self.tts.say("Lets start the game")
+        self.tts.say("Lets start the game. You play first. Color of your tokens is blue.")
 
         while True:
             board_seen = self.wait_for_opponent_token() #image
@@ -149,6 +148,7 @@ class NaoControl(ALModule):
 
             if (self.state.next_placement[0] != None and self.state.next_placement[1] != None):
                 # marvin makes a move
+                self.game.render(self.state.board)
                 self.beg_for_token_start(self.arm_responsible(self.state.next_placement))
                 self.wait_for_my_turn_completion()
 
@@ -213,13 +213,14 @@ class NaoControl(ALModule):
         while True:
             found, img, blob_size = self.vision.find_board( self.take_a_look())
             #-30 nahore, 45 dole
-            # 0        , 750000
-            arm_pitch = (blob_size/750000)*75 - 30
-            print("arm pitch {}".format(arm_pitch))
+            # 0        , 150000
+            arm_pitch = (blob_size/150000)*75 - 30
             self.motionProxy.setAngles("LShoulderPitch", rad(arm_pitch), 0.1)
             self.motionProxy.setAngles("RShoulderPitch", rad(arm_pitch), 0.1)
 
             if found:
+                if found_cnt == 0:
+                    self.tts.say("Keep it like this")
                 self.logger.debug("Board found {}".format(found))
                 found_cnt = found_cnt + 1
             if found_cnt >= 3:
@@ -269,19 +270,20 @@ class NaoControl(ALModule):
                     self.beg_for_token_finish(True)
 
     def beg_for_token_start(self, isLeftArm):
-        self.logger.debug("Begging start. Left? {}".format(isLeftArm))
-        self.motionProxy.setStiffnesses("RArm", 1.0)
-        self.motionProxy.setStiffnesses("LArm", 1.0)
         if isLeftArm:
             # left arm
             self.state.begging_left_arm = True
             self.state.begging_right_arm = False
+            self.motionProxy.setStiffnesses("LArm", 1.0)
+            self.motionProxy.setStiffnesses("RArm", 0.0)
             rNames = ["LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw", "LHand"]
             rValues = [rad(-14.1),      rad(24.0),       rad(-77.9),  rad(-21.1),   rad(-104.5), 0.53]
         else:
             # right arm
             self.state.begging_right_arm = True
             self.state.begging_left_arm = False
+            self.motionProxy.setStiffnesses("RArm", 1.0)
+            self.motionProxy.setStiffnesses("LArm", 0.0)
             rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "RHand"]
             rValues = [rad(-14.1),      rad(-24.0),      rad(77.9),   rad(21.1),    rad(104.5),  0.53]
 
@@ -315,7 +317,7 @@ class NaoControl(ALModule):
             self.state.begging_right_arm = True
             self.state.begging_left_arm = False
             rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "RHand"]
-            rValues = [rad(-14.1),      rad(-24.0),      rad(77.9),   rad(21.1),    rad(104.5),  0.53]
+            rValues = [rad(5.7),      rad(4.7),      rad(-16.4) ,     rad(63.1),    rad(9.6),  0.53]
             rTimes = [2.0] * 6
             self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
             time.sleep(3.0)
@@ -324,6 +326,7 @@ class NaoControl(ALModule):
             self.motionProxy.setStiffnesses("RArm", 1.0)
             self.motionProxy.setAngles("RHand", 0.99, 0.1)
             time.sleep(2.0)
+            # Close hand
             self.motionProxy.setAngles("RHand", 0.1, 0.1)
             self.relax_right_arm()
         self.state.my_turn = False
@@ -336,7 +339,7 @@ class NaoControl(ALModule):
         
         # Setup camera proxy to be used for image retrievals for later processing
         self.cameraProxy.setActiveCamera(xo_config_camera_id)
-        self.video_client = self.cameraProxy.subscribe("python_client", 3, 11, 5)
+        self.video_client = self.cameraProxy.subscribeCamera("python_client", xo_config_camera_id, 2, 11, 5)
 
         self.logger.debug("Connection with camera established + video_client subscription configured.")
         

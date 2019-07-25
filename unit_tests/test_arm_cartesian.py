@@ -83,17 +83,24 @@ class NaoControl(ALModule):
         # Confirm the initialization process has been concluded 
         # self.state.init_completed = True
 
-        self.beg_for_token_start(False)
-        self.prepare_for_placement(4)
+        for r in range(3):
+            for c in range(3):
+                placement = [r,c, False]
+                effector_side = self.arm_responsible(placement)
+                self.beg_for_token_start(effector_side)
+
+                self.motionProxy.setAngles(effector_side + "Hand", 0.45, 0.1)
+                time.sleep(2.0)
+
+                self.prepare_for_placement(placement)
 
 
 
     def arm_responsible(self, next_placement):
-        #returns isLeft
         if next_placement[1] == 0:
-            return True
+            return "L"
         else:
-            return False
+            return "R"
 
 
     def assume_initial_position(self):
@@ -110,25 +117,20 @@ class NaoControl(ALModule):
         self.logger.debug("Initial position initiated by disabling autonomous life and basic awareness. Body stiffness enabled.")
 
         
-    def relax_left_arm(self):
-        rNames = ["LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"]
-        rValues = [rad(48.0), rad(1.0), rad(-85.0), rad(-48.0), rad(5.0)]
+    def relax_arm(self, arm_side):
+        rNames = [arm_side + "ShoulderPitch", arm_side + "ShoulderRoll", arm_side + "ElbowYaw", arm_side + "ElbowRoll", arm_side + "WristYaw"]
+        if arm_side == "R":
+            rValues = [rad(50.0), rad(-4.0), rad( 85.0), rad( 48.0), rad(5.0)]
+        else:
+            rValues = [rad(50.0), rad(10.0), rad(-85.0), rad(-48.0), rad(5.0)]
         rTimes = [2.0] * 5
         self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
-        self.motionProxy.setStiffnesses("LArm", 0.0)
-        time.sleep(1.0)
-
-    def relax_right_arm(self):
-        rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw"]
-        rValues = [rad(48.0), rad(1.0), rad(85.0), rad(48.0), rad(5.0)]
-        rTimes = [2.0] * 5
-        self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
-        self.motionProxy.setStiffnesses("RArm", 0.0)
+        self.motionProxy.setStiffnesses(arm_side + "Arm", 0.0)
         time.sleep(1.0)
 
     def onTouched(self, strVarName, value):
-        global memory
-        memory.unsubscribeToEvent("TouchChanged", "NaoControl")
+        # global memory
+        # memory.unsubscribeToEvent("TouchChanged", "NaoControl")
 
         for p in value:
             if p[1]:
@@ -137,22 +139,22 @@ class NaoControl(ALModule):
                 if p[0] == "LArm":
                     self.beg_for_token_finish(True)
 
-    def beg_for_token_start(self, isLeftArm):
-        self.logger.debug("Begging start. Left? {}".format(isLeftArm))
-        if isLeftArm:
+    def beg_for_token_start(self, arm_side):
+        self.logger.debug("Begging start. Arm:{}".format(arm_side))
+        if arm_side == "L":
             # left arm
             self.motionProxy.setStiffnesses("LArm", 1.0)
             self.state.begging_left_arm = True
             self.state.begging_right_arm = False
             rNames = ["LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw", "LHand"]
-            rValues = [rad(-14.1),      rad(24.0),       rad(-77.9),  rad(-21.1),   rad(-104.5), 0.53]
+            rValues = [rad(-14.1),      rad(24.0),       rad(-77.9),  rad(-21.1),   rad(-104.5), 0.51]
         else:
             # right arm
             self.motionProxy.setStiffnesses("RArm", 1.0)
             self.state.begging_right_arm = True
             self.state.begging_left_arm = False
             rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "RHand"]
-            rValues = [rad(-14.1),      rad(-24.0),      rad(77.9),   rad(21.1),    rad(104.5),  0.53]
+            rValues = [rad(-14.1),      rad(-24.0),      rad(77.9),   rad(21.1),    rad(104.5),  0.58]
 
         rTimes = [2.0] * 6
         self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
@@ -169,6 +171,8 @@ class NaoControl(ALModule):
             self.prepare_for_placement(self.state.next_placement)
 
     def prepare_for_placement(self, placement):
+        p_row = placement[0]
+        p_col = placement[1]
         self.logger.debug("PREPARE to placing to {}".format(placement))
         if placement != -1:
             # TODO read from movement repository
@@ -177,22 +181,55 @@ class NaoControl(ALModule):
             #rTimes = [2.0] * 5
             #self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
 
+            #x:forward, y:left
+            rows = [0.05, 0, -0.05]
+            cols = [0, 0.02, -0.03]
+
             #prepare to move to placement position
-            self.motionProxy.setStiffnesses("RArm", 1.0)
+            effector_side = self.arm_responsible(placement)
+            effector   = effector_side + "Arm"
+            self.motionProxy.setStiffnesses(effector, 1.0)
             self.state.begging_right_arm = True
             self.state.begging_left_arm = False
-            rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "RHand"]
-            rValues = [rad(5.7),      rad(4.7),      rad(-16.4) ,     rad(63.1),    rad(9.6),  0.53]
-            rTimes = [2.0] * 6
+            rNames = [effector_side + "ShoulderPitch", effector_side + "ShoulderRoll", effector_side + "ElbowYaw", effector_side + "ElbowRoll", effector_side + "WristYaw"]
+            if effector_side == "R":
+                rValues = [rad(5.7),      rad(4.7),      rad(-16.4) ,     rad(63.1),    rad(9.6)]
+            else:
+                rValues = [rad(6.3),      rad(9.9),      rad(-48.9) ,     rad(-31.6),    rad(4.1)]
+            rTimes = [2.0] * 5
             self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
-            time.sleep(3.0)
+            time.sleep(1.0)
+            path = []
+            frame      = motion.FRAME_TORSO
+            axisMask   = almath.AXIS_MASK_VEL # just control position
+            useSensorValues = False
+            currentTf = self.motionProxy.getTransform(effector, frame, useSensorValues)
+            targetTf  = almath.Transform(currentTf)
+            print(rows[p_row], cols[p_col])
+            targetTf.r1_c4 +=  rows[p_row] #x
+            targetTf.r2_c4 +=  cols[p_col] #y
+            path.append(list(targetTf.toVector()))
+            targetTf.r3_c4 +=  -0.03 #z
+            path.append(list(targetTf.toVector()))
+            times      = [2.0, 2.5] # seconds
+            self.motionProxy.transformInterpolations(effector, frame, path, axisMask, times)
 
             # Open hand
-            self.motionProxy.setStiffnesses("RArm", 1.0)
-            self.motionProxy.setAngles("RHand", 0.99, 0.1)
-            time.sleep(2.0)
-            self.motionProxy.setAngles("RHand", 0.1, 0.1)
-            self.relax_right_arm()
+            self.motionProxy.setStiffnesses(effector, 1.0)
+            self.motionProxy.setAngles(effector_side + "Hand", 0.89, 0.1)
+            time.sleep(1.0)
+
+            # Move up
+            path = []
+            targetTf.r3_c4 +=  0.03 #z
+            path.append(list(targetTf.toVector()))
+            times      = [0.5] # seconds
+            self.motionProxy.transformInterpolations(effector, frame, path, axisMask, times)
+
+            # Close hand
+            self.motionProxy.setAngles(effector_side + "Hand", 0.1, 0.1)
+            self.relax_arm(effector_side)
+            time.sleep(1.0)
         self.state.my_turn = False
 
 
