@@ -22,14 +22,11 @@ class GameControl:
         if cur_status == None:
             depth = len(self.empty_cells(board))
             move = self.minimax(board, depth, self.robot)
-            self.logger.info('Robot\'s move: ' + str(move) )
             
-            # print(board)
+            # Evaluate also the status after robot's move
             board[move[0]][move[1]] = self.robot
-            # print(board)
-
             move[2] = self.evaluate_board(board)
-            # self.logger.info('Robot\'s move: ' + str(move) )
+            self.logger.info('Robot\'s move: ' + str(move) )
 
             return move
         else:

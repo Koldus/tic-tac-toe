@@ -5,9 +5,15 @@ logging.basicConfig(format = '%(asctime)s;%(levelname)s;%(filename)s;%(message)s
 
 game = GameControl(logging)
 
+print(game.evaluate_board([ [1, 0, 0], [0, 1, 0], [0, 0, 1] ]))
+print(game.evaluate_board([ [-1, 0, 0], [0, -1, 0], [0, 0, -1] ]))
+print(game.evaluate_board([ [1, -1, 1], [-1, -1, 1], [1, 1, -1] ]))
+print(game.evaluate_board([ [1, 0, 0], [0, -1, 0], [0, 0, 1] ]))
 
-print(game.is_win([ [1, 0, 0], [0, 1, 0], [0, 0, 1] ]))
-print(game.is_win([ [1, 0, 0], [0, -1, 0], [0, 0, 1] ]))
+print(game.play([ [1, 0, 0], [0, 1, 0], [0, 0, 1] ]))
+print(game.play([ [-1, 0, 0], [0, -1, 0], [0, 0, -1] ]))
+print(game.play([ [1, -1, 1], [-1, -1, 1], [1, 1, -1] ]))
+print(game.play([ [1, 0, 0], [0, -1, 0], [0, 0, 1] ]))
 
 # Start the test game ...
 
@@ -21,17 +27,25 @@ else:
 
 while True:
 
-    if not game.evaluate_board(state):
-        break
-
     if turn == 1:
         move = game.play(state)
+        print(move)
+
+        if move[2] == 1:
+            print('robot wins, break')
+            break
+        elif move[2] == -1:
+            print('you win, break')
+            break
+        elif move[2] == 0:
+            print('its a tie')
+            break
     else:
         game.render(state)
         position = raw_input('Where would you like to play? (raw colum) ')
         pos = position.split()
         move = [int(x) for x in pos]
-        
+    
     state[move[0]][move[1]] = turn
     turn = -turn
 
