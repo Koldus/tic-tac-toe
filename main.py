@@ -37,30 +37,12 @@ def initialize_game():
         logging.debug("init_completed state evaluated as False")
         sys.exit()
 
-    # Initialize the game
+    # Play the game
     NaoControl.begin_game()
 
-    if(not NaoControl.state.game_ready):
-        logging.warning("The game initialization process couldn't be completed and the application hasended.")
-        logging.debug("game_ready state evaluated as False")
-        sys.exit()
-    print("Jdu neskoncit")
-    # Keep playing until the end
-    while NaoControl.state.game_ready:
-        NaoControl.state.next_placement = 4
-        pass
-    
     # Unsubscribe from the camera feed
     NaoControl.cameraProxy.unsubscribe(NaoControl.video_client)
 
-    if( NaoControl.state.result == 0 ):
-        logging.info("Game ended: Human won.")
-    elif( NaoControl.state.result == 1 ):
-        logging.info("Game ended: A tie.")
-    elif( NaoControl.state.result == 2 ):
-        logging.info("Game ended: Marvin won.")
-    else:
-        logging.error("Application ended correctly, but a correct result.")
 
     sys.exit()
 
