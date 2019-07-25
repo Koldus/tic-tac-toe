@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
 import time
+import os
 
 '''
 Open tasks:
@@ -69,7 +70,7 @@ class NaoVision:
 
         # Store image corners in memory
         tl, tr, bl, br = self.find_corners(h_lines_ordered, v_lines_ordered)
-        self.corners = [[tl, tr],[bl, br]]
+        self.corners = np.array([ tl, tr, br, bl ], dtype = "float32")
 
         # im_lines = cv.circle(im_lines, tl, 15, (255,0,0), -1)
         # im_lines = cv.circle(im_lines, tr, 15, (255,0,0), -1)
@@ -78,6 +79,18 @@ class NaoVision:
         
         # Store image segments dimensions in memory
         self.dimensions = self.find_all_segments(h_lines_ordered, v_lines_ordered)
+
+        # Calculate the pixel dimensions of the identified board
+        width_bottom = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
+        width_up = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+        height_right = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
+        height_left = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
+
+        # Take the maximum of the width and height values a the final dimensions
+        self.matrix_dim = max(int(width_up), int(height_right), int(width_bottom), int(height_left)) - 1
+        
+        # Construct destination points for correct image
+        self.matrix_destination = np.array([ [0, 0], [self.matrix_dim, 0], [self.matrix_dim, self.matrix_dim], [0, self.matrix_dim] ], dtype = "float32")
 
         return(im_lines)
 
@@ -90,31 +103,46 @@ class NaoVision:
                 ... 0 represents and empy field
                 ... +1 / -1 represents the two possible states
         '''
+        color_threshold = 20
+        ignore_margin_pt = 10
+
+        # Store image for dashboard
+        cv.imwrite(os.path.join("html/data", "raw_image.jpg"), img)
+
+        # Re-shape the image to correct for the perspective
+        M = cv.getPerspectiveTransform(self.corners, self.matrix_destination)
+        warp = cv.warpPerspective(img, M, (self.matrix_dim, self.matrix_dim))
+        
+        # Store image for dashboard
+        cv.imwrite(os.path.join("html/data", "current_state_raw.jpg"), warp)
         
         # Setup empty arrays for the current state
         current_state = [[0,0,0],[0,0,0],[0,0,0]]
         frames = [[None, None, None],[None, None, None],[None, None, None]]
 
-        # Cut the board and store in a temp variable
-        # frames[0][0] = self.cut_image(img, [245, 50, 455, 230])
-        # frames[0][1] = self.cut_image(img, [490, 40, 730, 225])
-        # frames[0][2] = self.cut_image(img, [765, 40, 987, 220])
-        # frames[1][0] = self.cut_image(img, [200, 255, 435, 490])
-        # frames[1][1] = self.cut_image(img, [480, 255, 745, 485])
-        # frames[1][2] = self.cut_image(img, [780, 250, 1035, 480])
-        # frames[2][0] = self.cut_image(img, [140, 515, 400, 815])
-        # frames[2][1] = self.cut_image(img, [455, 510, 760, 820])
-        # frames[2][2] = self.cut_image(img, [810, 510, 1085, 820])
+        field_size = int(self.matrix_dim / 3)
+        ignore_margin_size = ignore_margin_pt * field_size / 100
+        field_size_reduced = field_size - 2 * ignore_margin_size
+        
+        print('Field size: ' + str(field_size))
+        print('Ignore margin: ' + str(ignore_margin_size))
 
-        c = 0
-        while c < 3:
-            r = 0
-            while r < 3:
-                # Select only relevant points, tl and br
-                points = self.dimensions[c][r]
-                frames[c][r] = self.cut_image(img, [])
-                r = r + 1
-            c = c + 1
+        print('[0][0]: ' + str( [ ignore_margin_size, ignore_margin_size, ignore_margin_size + field_size_reduced, ignore_margin_size + field_size_reduced] ))
+        warp = cv.rectangle( warp, (ignore_margin_size, ignore_margin_size), (ignore_margin_size + field_size_reduced, ignore_margin_size + field_size_reduced), (0,255,0), 1 )
+
+        cv.imshow("cropped", warp)
+        cv.waitKey(0)
+
+        # Cut the board and store in a temp variable (300px wide)
+        frames[0][0] = self.cut_image(warp, [35, 45, 335, 345])
+        frames[0][1] = self.cut_image(warp, [405, 45, 705, 345])
+        frames[0][2] = self.cut_image(warp, [775, 45, 1075, 345])
+        frames[1][0] = self.cut_image(warp, [35, 415, 335, 715])
+        frames[1][1] = self.cut_image(warp, [405, 415, 705, 715])
+        frames[1][2] = self.cut_image(warp, [775, 415, 1075, 715])
+        frames[2][0] = self.cut_image(warp, [35, 785, 335, 1085])
+        frames[2][1] = self.cut_image(warp, [405, 785, 705, 1085])
+        frames[2][2] = self.cut_image(warp, [775, 785, 1075, 1085])
 
         # Stretch the image to a perfect square
         self.logger.debug("Image frame cutting completed")
@@ -123,7 +151,7 @@ class NaoVision:
         for row in frames:
             c = 0
             for cell in row:
-                color = self.analyze_color(cell, 20)
+                color = self.analyze_color(cell, color_threshold)
 
                 if color == 'red':
                     current_state[r][c] = +1
