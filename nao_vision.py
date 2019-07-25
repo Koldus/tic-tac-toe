@@ -71,11 +71,6 @@ class NaoVision:
         # Store image corners in memory
         tl, tr, bl, br = self.find_corners(h_lines_ordered, v_lines_ordered)
         self.corners = np.array([ tl, tr, br, bl ], dtype = "float32")
-
-        # im_lines = cv.circle(im_lines, tl, 15, (255,0,0), -1)
-        # im_lines = cv.circle(im_lines, tr, 15, (255,0,0), -1)
-        # im_lines = cv.circle(im_lines, bl, 15, (255,0,0), -1)
-        # im_lines = cv.circle(im_lines, br, 15, (255,0,0), -1)
         
         # Store image segments dimensions in memory
         self.dimensions = self.find_all_segments(h_lines_ordered, v_lines_ordered)
@@ -92,6 +87,7 @@ class NaoVision:
         # Construct destination points for correct image
         self.matrix_destination = np.array([ [0, 0], [self.matrix_dim, 0], [self.matrix_dim, self.matrix_dim], [0, self.matrix_dim] ], dtype = "float32")
 
+        self.logger.debug("The image coordinates have been fixed. Do not move the board from this point forward.")
         return(im_lines)
 
 
