@@ -12,7 +12,7 @@ def shrink_image(image):
     resized = cv.resize(image, dim, interpolation = cv.INTER_AREA)
     return resized
 
-i = 2
+i = 1
 while True:
     im = cv.imread("unit_tests/snapshot_" + str(i) + ".jpg")
     vision = NaoVision((im.shape[0], im.shape[1]), logging)
@@ -30,5 +30,5 @@ while True:
 
     i = i + 1
 
-    if i > 2:
+    if i > 18:
         break

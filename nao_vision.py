@@ -120,29 +120,27 @@ class NaoVision:
         current_state = [[0,0,0],[0,0,0],[0,0,0]]
         frames = [[None, None, None],[None, None, None],[None, None, None]]
 
+        # Configure offsets for cutting the image
         field_size = int(self.matrix_dim / 3)
         ignore_margin_size = ignore_margin_pt * field_size / 100
         field_size_reduced = field_size - 2 * ignore_margin_size
-        
-        print('Field size: ' + str(field_size))
-        print('Ignore margin: ' + str(ignore_margin_size))
+        offset_1 = ignore_margin_size
+        offset_2 = ignore_margin_size + field_size_reduced
+        offset_3 = field_size + ignore_margin_size
+        offset_4 = 2 * field_size - ignore_margin_size
+        offset_5 = 2 * field_size + ignore_margin_size
+        offset_6 = 3 * field_size - ignore_margin_size
 
-        print('[0][0]: ' + str( [ ignore_margin_size, ignore_margin_size, ignore_margin_size + field_size_reduced, ignore_margin_size + field_size_reduced] ))
-        warp = cv.rectangle( warp, (ignore_margin_size, ignore_margin_size), (ignore_margin_size + field_size_reduced, ignore_margin_size + field_size_reduced), (0,255,0), 1 )
-
-        cv.imshow("cropped", warp)
-        cv.waitKey(0)
-
-        # Cut the board and store in a temp variable (300px wide)
-        frames[0][0] = self.cut_image(warp, [35, 45, 335, 345])
-        frames[0][1] = self.cut_image(warp, [405, 45, 705, 345])
-        frames[0][2] = self.cut_image(warp, [775, 45, 1075, 345])
-        frames[1][0] = self.cut_image(warp, [35, 415, 335, 715])
-        frames[1][1] = self.cut_image(warp, [405, 415, 705, 715])
-        frames[1][2] = self.cut_image(warp, [775, 415, 1075, 715])
-        frames[2][0] = self.cut_image(warp, [35, 785, 335, 1085])
-        frames[2][1] = self.cut_image(warp, [405, 785, 705, 1085])
-        frames[2][2] = self.cut_image(warp, [775, 785, 1075, 1085])
+        # Cut the board and store in a temp variable
+        frames[0][0] = self.cut_image(warp, [offset_1, offset_1, offset_2, offset_2])
+        frames[0][1] = self.cut_image(warp, [offset_3, offset_1, offset_4, offset_2])
+        frames[0][2] = self.cut_image(warp, [offset_5, offset_1, offset_6, offset_2])
+        frames[1][0] = self.cut_image(warp, [offset_1, offset_3, offset_2, offset_4])
+        frames[1][1] = self.cut_image(warp, [offset_3, offset_3, offset_4, offset_4])
+        frames[1][2] = self.cut_image(warp, [offset_5, offset_3, offset_6, offset_4])
+        frames[2][0] = self.cut_image(warp, [offset_1, offset_5, offset_2, offset_6])
+        frames[2][1] = self.cut_image(warp, [offset_3, offset_5, offset_4, offset_6])
+        frames[2][2] = self.cut_image(warp, [offset_5, offset_5, offset_6, offset_6])
 
         # Stretch the image to a perfect square
         self.logger.debug("Image frame cutting completed")
