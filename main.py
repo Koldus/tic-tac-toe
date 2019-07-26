@@ -84,6 +84,5 @@ if __name__ == '__main__':
         
         global NaoControl
         if NaoControl != None:
-            NaoControl.relax_left_arm()
-            NaoControl.relax_right_arm()
+            NaoControl.relax_arms()
             NaoControl.cameraProxy.unsubscribe(NaoControl.video_client)

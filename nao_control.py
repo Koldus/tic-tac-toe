@@ -152,11 +152,11 @@ class NaoControl(ALModule):
                 self.wait_for_my_turn_completion()
 
             if self.is_game_finished(self.state.next_placement[2]):
+                self.state.result = self.state.next_placement[2]
                 break
 
             self.tts.say("Your turn my dear")
         
-        self.state.result = game_result
 
 
     
