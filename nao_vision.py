@@ -65,6 +65,8 @@ class NaoVision:
         h_lines_ordered = self.order_lines(h_lines, True)
         v_lines_ordered = self.order_lines(v_lines, False)
 
+        self.lines = [h_lines_ordered, v_lines_ordered]
+
         # Store image corners in memory
         tl, tr, bl, br = self.find_corners(h_lines_ordered, v_lines_ordered)
         self.corners = np.array([ tl, tr, br, bl ], dtype = "float32")
@@ -99,6 +101,18 @@ class NaoVision:
         color_threshold = 20
         ignore_margin_pt = 10
 
+        # Store image for dashboard
+        cv.imwrite(os.path.join("html/data", "raw_image.jpg"), img)
+
+        # Store image with lines and intersects
+        im_lines = self.image_preprocessing(img)
+        im_lines = cv.cvtColor(im_lines, cv.COLOR_GRAY2RGB)
+
+        for line in self.lines[0] + self.lines[1]:
+            im_lines = self.draw_lines(line[0], im_lines)
+        
+        cv.imwrite(os.path.join("html/data", "lines.jpg"), im_lines)
+        
         # Store image for dashboard
         cv.imwrite(os.path.join("html/data", "raw_image.jpg"), img)
 

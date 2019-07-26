@@ -36,7 +36,7 @@ function update_dashboard() {
                 }
             });
             $('#status_img_1').attr("src", "data/raw_image.jpg?" + new Date().getTime() );
-            $('#status_img_2').attr("src", "data/blob.jpg?" + new Date().getTime() );
+            $('#status_img_2').attr("src", "data/lines.jpg?" + new Date().getTime() );
             $('#status_img_3').attr("src", "data/current_state_raw.jpg?" + new Date().getTime() );
             $('#status_img_4').attr("src", "data/game_state.jpg?" + new Date().getTime() );
             

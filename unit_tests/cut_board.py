@@ -14,7 +14,7 @@ def shrink_image(image):
 
 i = 1
 while True:
-    im = cv.imread("unit_tests/snapshot_" + str(i) + ".jpg")
+    im = cv.imread("unit_tests/snapshot_sm_" + str(i) + ".jpg")
     vision = NaoVision((im.shape[0], im.shape[1]), logging)
     
     board_found, result, blob_size = vision.find_board(im)
@@ -30,5 +30,5 @@ while True:
 
     i = i + 1
 
-    if i > 18:
+    if i > 1:
         break
