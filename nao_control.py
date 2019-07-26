@@ -58,7 +58,7 @@ class NaoControl(ALModule):
         self.cameraProxy = ALProxy("ALVideoDevice")
         self.ledProxy = ALProxy("ALLeds")
         self.tts = ALProxy("ALTextToSpeech")
-        self.tts.setParameter("defaultVoiceSpeed", 150)
+        self.tts.setParameter("defaultVoiceSpeed", 85)
         global memory
         memory = ALProxy("ALMemory")
 
@@ -81,14 +81,23 @@ class NaoControl(ALModule):
 
 
     def is_board_changed(self, board_seen):
+        changed = False
+        missing = False
         for row in range (3):
             for col in range (3):
+                if (board_seen[row][col] == 0) and (self.state.board[row][col] != 0):
+                    self.logger.warning("Token removed from {},{}".format(row, col))
+                    missing = True
                 if board_seen[row][col] != self.state.board[row][col]:
-                    self.logger.debug("Compare board [{},{}] old:{} seen:{}".format(row, col, self.state.board[row][col], board_seen[row][col]))
-                    self.vision.renderImage(board_seen)
-                    self.state.board = board_seen
-                    return True
-        return False
+                    changed = True
+
+        if changed and not missing:
+            self.logger.debug("Compare board [{},{}] old:{} seen:{}".format(row, col, self.state.board[row][col], board_seen[row][col]))
+            self.vision.renderImage(board_seen)
+            self.state.board = board_seen
+            return True
+        else:
+            return False
 
 
     def wait_for_my_turn_completion(self):
@@ -121,10 +130,12 @@ class NaoControl(ALModule):
         self.tts_say(["Yes, yes, yes! I won again.", "Yupee. Of course, I won. I always win.", "I can play better than you. I won the game"])
     
     def game_tie(self):
-        self.tts_say(["That was a fun game. Your moves were optimal.", "Good job. It is not easy to beat me", "You won. I won. It is a tie."])
+        self.tts_say(["That was a fun game. Your moves were optimal.", "Good job. It is a tie. It is not so easy to beat me", "You won. I won. It is a tie."])
 
     def wait_for_opponent_token(self):
+        cycles = random.randrange(4)
         while True:
+            cycles = cycles + 1
             picture = self.take_a_look()
             board_seen = self.vision.get_current_state(picture)
             self.logger.debug("board_seen {}".format(board_seen))
@@ -133,12 +144,40 @@ class NaoControl(ALModule):
                 return board_seen
             else:
                 time.sleep(0.5)
+            if cycles == 10:
+                cycles = 0
+                self.tts_say(["Can you speed up?", 
+                    "I am a bit bored.", 
+                    "Do you know who is the current president?", 
+                    "bla bla", 
+                    "My mom was also a robot.",
+                    "My daddy was \\vct=50\\bigger than you",
+                    "Can you imagine world without robots? I cannot.",
+                    "What's your name?",
+                    "Hello, my name is Marvin. My internet adress is hunderd ninety two dot three hunderd eleven dot ha ha dot ha ha ha",
+                    "Common on",
+                    "The planet earth is rotating to left or right. Can you tell?",
+                    "Have you been to university?",
+                    "I wish I win this game",
+                    "Please watch the time",
+                    "Do you think you are clever?",
+                    "Rush",
+                    "Feel free to play faster",
+                    "Tell me story of your life.",
+                    "If you play like this, we will never finish",
+                    "Do you know Mirek and Honza? They are my friends."
+                    "Do not hesitate and make a move",
+                    "I am working for \\tn=spell\\DHL.\\tn=normal\\\\pau=500\\Do you?",
+                    "Light is faster then sound.Sound is \\emph=2\\faster than you are",
+                    "Are you also running on batteries?",
+                    "Are you still playing?", 
+                    "What's up?"])
 
 
     def begin_game(self):
         self.logger.debug("Game begins")
         self.state.game_ready = True
-        self.tts_say(["Lets start the game. You play first. Color of your tokens is blue.", "Please start. It is your turn now. Your tokens are blue."])
+        self.tts_say(["Lets start the game. \\vct=150\\You play first. \\vct=100\\Color of your tokens is \\pau=400\\ blue.", "Please start. It is your turn now. Your tokens are \\pau=400\\blue."])
 
         while True:
             board_seen = self.wait_for_opponent_token() #image
@@ -153,6 +192,7 @@ class NaoControl(ALModule):
                 self.vision.renderImage(self.vision.get_current_state(self.take_a_look()))
 
             if self.is_game_finished(self.state.next_placement[2]):
+                self.vision.renderImage(self.vision.get_current_state(self.take_a_look()))
                 self.state.result = self.state.next_placement[2]
                 break
 
@@ -191,7 +231,7 @@ class NaoControl(ALModule):
         self.motionProxy.angleInterpolation(hNames, hValues, hTimes, True)
 
         time.sleep(1.0)
-        self.tts_say(["Dear lord, I need a board.", "I need the board", "A board \\pau=400\\ a board \\pau=400\\ a kingdom for a board"])
+        self.tts_say(["\\vct=50\\Dear lord, I need a board.\\vct=100\\", "I need the board", "A board \\pau=400\\ a board \\pau=400\\ a kingdom for a board"])
 
         # Configure arms to the right position
         rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"]
@@ -212,7 +252,6 @@ class NaoControl(ALModule):
             pos_down = 52
             pos_up = -30
             max_blob_size = 190000
-            print("{}   {}^2   = {}".format( blob_size/max_blob_size, (blob_size/max_blob_size)**2, ((blob_size/max_blob_size)**2) * (pos_down-pos_up) + pos_up) )
             arm_pitch = ((blob_size/max_blob_size)**1.3) * (pos_down-pos_up) + pos_up
             self.motionProxy.setAngles("LShoulderPitch", rad(arm_pitch), 0.1)
             self.motionProxy.setAngles("RShoulderPitch", rad(arm_pitch), 0.1)
@@ -317,7 +356,7 @@ class NaoControl(ALModule):
 
                 [16.5, 16.0, 15.2,-78.5,  7.4],  [ 3.6,  8.9,-33.0, 68.8,  9.0],  [ 2.5,-10.0,-36.9, 80.2, -3.3],
 
-                [-17.7,-7.6, 56.3,-88.5,-76.9],  [ 3.2,  5.4,-29.4, 88.2,  3.3],  [-13.6,-2.2,-51.7, 88.0, 73.4]
+                [-17.7,-7.6, 56.3,-88.5,-76.9],  [ 0.6, 13.0,-35.0, 87.5,  0.3],  [-13.6,-2.2,-51.7, 88.0, 73.4]
             ]
 
             #prepare to move to placement position
