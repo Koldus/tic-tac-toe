@@ -33,8 +33,6 @@ class NaoControl(ALModule):
     '''
     Main class that controls the game and all interaction with the Nao robot.
     '''
-    
-    SAY_TOKEN_GIVEN = ["Fine", "Thanks", "OK. I got it.", "Let me play"]
 
 
     ## -------------------------------------------------------------
@@ -60,6 +58,7 @@ class NaoControl(ALModule):
         self.cameraProxy = ALProxy("ALVideoDevice")
         self.ledProxy = ALProxy("ALLeds")
         self.tts = ALProxy("ALTextToSpeech")
+        self.tts.setParameter("defaultVoiceSpeed", 150)
         global memory
         memory = ALProxy("ALMemory")
 
@@ -70,7 +69,7 @@ class NaoControl(ALModule):
         im = self.take_a_look()
         
         # Initiate the CV module and game
-        self.vision = NaoVision((im[0], im[1]), logging)
+        self.vision = NaoVision((im.shape[1], im.shape[0]), logging)
         self.game = GameControl(logging)
 
         # Assume the initial position and wait for the vision to be enabled
@@ -86,6 +85,7 @@ class NaoControl(ALModule):
             for col in range (3):
                 if board_seen[row][col] != self.state.board[row][col]:
                     self.logger.debug("Compare board [{},{}] old:{} seen:{}".format(row, col, self.state.board[row][col], board_seen[row][col]))
+                    self.vision.renderImage(board_seen)
                     self.state.board = board_seen
                     return True
         return False
@@ -115,13 +115,13 @@ class NaoControl(ALModule):
         return False
 
     def game_lost(self):
-        self.tts.say("Hmmm. I lost. I am sure I will win next time.")
+        self.tts_say(["Capitulation. You are the winner. Congratulations.", "Hm. I lost. I am sure I will win next time.", "Good job. It is not easy to beat me"])
 
     def game_won(self):
-        self.tts.say("Yupee. Of course, I won. I always win.")
+        self.tts_say(["Yes, yes, yes! I won again.", "Yupee. Of course, I won. I always win.", "I can play better than you. I won the game"])
     
     def game_tie(self):
-        self.tts.say("Good play. Your moves were optimal.")
+        self.tts_say(["That was a fun game. Your moves were optimal.", "Good job. It is not easy to beat me", "You won. I won. It is a tie."])
 
     def wait_for_opponent_token(self):
         while True:
@@ -138,11 +138,11 @@ class NaoControl(ALModule):
     def begin_game(self):
         self.logger.debug("Game begins")
         self.state.game_ready = True
-        self.tts.say("Lets start the game. You play first. Color of your tokens is blue.")
+        self.tts_say(["Lets start the game. You play first. Color of your tokens is blue.", "Please start. It is your turn now. Your tokens are blue."])
 
         while True:
             board_seen = self.wait_for_opponent_token() #image
-            self.tts.say("Nice play")
+            self.tts_say(["Nice play", "I see", "Are you sure?", "Aha", "Fine", "OK ok", "Really?", "I thought you will play like this.", "That's good"])
             self.state.next_placement = self.game.play(board_seen)  # [row, col, state]  state 0:tie, 1:robotwins, -1:humanwins, None: continue
 
             if (self.state.next_placement[0] != None and self.state.next_placement[1] != None):
@@ -150,12 +150,13 @@ class NaoControl(ALModule):
                 self.game.render(self.state.board)
                 self.beg_for_token_start(self.arm_responsible(self.state.next_placement))
                 self.wait_for_my_turn_completion()
+                self.vision.renderImage(self.vision.get_current_state(self.take_a_look()))
 
             if self.is_game_finished(self.state.next_placement[2]):
                 self.state.result = self.state.next_placement[2]
                 break
 
-            self.tts.say("Your turn my dear")
+            self.tts_say(["Your turn my dear", "Please go", "Your turn", "Please, play"])
         
 
 
@@ -182,11 +183,6 @@ class NaoControl(ALModule):
             id = self.postureProxy.goToPosture(xo_config_base_position, 1.0)
             self.postureProxy.wait(id, 0)
 
-#        self.tts.say("ok")
-#        self.prepare_for_placement(1)
-#        self.tts.say("done")
-#        sys.exit()
-
         # Configure head to the right position
         self.motionProxy.setStiffnesses("Head", 1.0)
         hNames = ["HeadPitch", "HeadYaw"]
@@ -195,7 +191,7 @@ class NaoControl(ALModule):
         self.motionProxy.angleInterpolation(hNames, hValues, hTimes, True)
 
         time.sleep(1.0)
-        self.tts.say("Dear lord, I need a board.")
+        self.tts_say(["Dear lord, I need a board.", "I need the board", "A board \\pau=400\\ a board \\pau=400\\ a kingdom for a board"])
 
         # Configure arms to the right position
         rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"]
@@ -223,7 +219,7 @@ class NaoControl(ALModule):
 
             if found:
                 if found_cnt == 0:
-                    self.tts.say("Keep it like this")
+                    self.tts_say(["I got it."])
                 self.logger.debug("Board found {}".format(found))
                 found_cnt = found_cnt + 1
             if found_cnt >= 3:
@@ -234,7 +230,7 @@ class NaoControl(ALModule):
 
         self.ledProxy.randomEyes(1.0)
         self.ledProxy.off("FaceLeds")
-        self.tts.say("I got it.")
+        self.tts_say(["Keep it like this", "Should be ok now", "In position. Do not move it"])
 
         self.relax_arms()
         # Close the initialization process
@@ -309,7 +305,7 @@ class NaoControl(ALModule):
         if (arm_side == "L" and self.state.begging_left_arm == True) or (arm_side == "R" and self.state.begging_right_arm == True):
             self.state.begging_left_arm = False
             self.state.begging_left_arm = False
-            self.tts.say(self.SAY_TOKEN_GIVEN[random.randrange(len(self.SAY_TOKEN_GIVEN))])
+            self.tts_say(["Fine", "Thanks", "OK. I got it.", "Let me play"])
             self.prepare_for_placement(self.state.next_placement)
 
     def prepare_for_placement(self, placement):
@@ -409,8 +405,13 @@ class NaoControl(ALModule):
         print("Execute the move")
         pass
         
+    def tts_say(self, texts):
+        return self.tts.say(texts[random.randrange(len(texts))])
+    
 def rad(val):
     return val * almath.TO_RAD
 
 def rad_array(arr):
     return [i * almath.TO_RAD for i in arr]
+
+
