@@ -82,7 +82,6 @@ if __name__ == '__main__':
         #logging.fatal("Game exectution failed")
         logging.debug('Error message: %s', str(e).replace("\n"," ").replace("\t"," "))
         
-        global NaoControl
         if NaoControl != None:
             NaoControl.relax_arms()
             NaoControl.cameraProxy.unsubscribe(NaoControl.video_client)

@@ -3,7 +3,7 @@ var parsed = 0;
 
 function parseLog( i, raw ) {
     var log = { id : i, type : "", text : "", logged : "" };
-    console.log(raw);
+    
     raw = raw.split(";");
     
     // Covert raw data to the log object and pass it back
@@ -15,12 +15,13 @@ function parseLog( i, raw ) {
 }
 
 function update_dashboard() {
-
+    console.log("i\'m here")
     // Simplify if additional requests are not required
     $.when(
         $.ajax({ url: "data/main.log", dataType: "text" })
     ).then(
         (main) => {
+            console.log(main)
             main = main.split('\n');
             $.each( main, function( index ) {
                 // Ignore empty lines
@@ -34,28 +35,15 @@ function update_dashboard() {
                     }
                 }
             });
-            // Set timeout for the next check
-            setTimeout(update_dashboard, 2000);
-        }, err => { console.log(err); }
-    );
-    
-
-    // $.getJSON( "data/logs.json", function(d) {
-
-    //     $.each( d.data, function( key, log ) {
+            $('#status_img_1').attr("src", "data/raw_image.jpg?" + new Date().getTime() );
+            $('#status_img_2').attr("src", "data/blob.jpg?" + new Date().getTime() );
+            $('#status_img_3').attr("src", "data/current_state_raw.jpg?" + new Date().getTime() );
+            $('#status_img_4').attr("src", "data/game_state.jpg?" + new Date().getTime() );
             
-    //         if( parsed.indexOf(log.id) < 0 ) {
-    //             new_row = dt.row.add( [ log.type.toUpperCase(), log.text, log.logged ] ).draw().node();
-    //             $(new_row).addClass('log-'+log.type);
-    //             parsed.push(log.id);
-    //         }
-
-    //     });
-
-    //     if(d.status == "in_progress") {
-    //         setTimeout(update_dashboard, 2000);
-    //     }
-    // });
+        }, err => { console.log(err); },
+        // Set timeout for the next check
+        setTimeout(update_dashboard, 2000)
+    );
     
 }
 

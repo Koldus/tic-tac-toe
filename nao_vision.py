@@ -14,11 +14,8 @@ Embedded simplifications:
 class NaoVision:    
 
     def __init__(self, sizes, logging):
-        self.camera_size = sizes
-        self.board_visible = False
-
         self.logger = logging
-        self.logger.debug("Computer vision initialized with the following camera size: %s",str(self.camera_size))
+        self.logger.debug("Computer vision initialized with the following camera size: %s",str(sizes))
 
 
 
@@ -510,6 +507,42 @@ class NaoVision:
         color_count = np.count_nonzero(masked_image)
         total_count = masked_image.size
         return 100 * color_count / total_count
+
+
+
+    def renderImage(self, state):
+        field_size = 200
+        image_size = 3 * field_size
+
+        img = np.zeros((image_size,image_size,3),np.uint8)
+        
+        r = 0
+        for row in state:
+            offset_y = field_size * r
+            c = 0
+            for cell in row:
+                offset_x = field_size * c
+                
+                x0 = offset_x
+                y0 = offset_y
+                x1 = offset_x + field_size
+                y1 = offset_y + field_size
+
+                # Fill the frame based on the value
+                if cell == 1:
+                    cv.rectangle(img, (x0, y0), (x1, y1), (0, 0, 255), -1)
+                elif cell == -1:
+                    cv.rectangle(img, (x0, y0), (x1, y1), (255, 0, 0), -1)
+                else:
+                    cv.rectangle(img, (x0, y0), (x1, y1), (255, 255, 255), -1)
+                
+                # Draw a frame
+                cv.rectangle(img, (x0, y0), (x1, y1), (0, 0, 0), 10)
+                c = c + 1
+            
+            r = r + 1
+
+        cv.imwrite(os.path.join("html/data", "game_state.jpg"), img)
 
 
 
