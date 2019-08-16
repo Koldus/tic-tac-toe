@@ -7,14 +7,15 @@ Company: DHL Information Services (Europe), s.r.o.
 @author: mkoldus
 '''
 
-import sys
+import sys, os
 import argparse
 from threading import Timer
 import logging
+from flask import Flask
+from flask import send_from_directory, request
+import json
 
 from config import *
-from nao_control import NaoControl as NaoControlModule
-from naoqi import ALBroker
 
 # Default parameter
 robotIp = "127.0.0.1"
@@ -23,7 +24,7 @@ port = 9559
 NaoControl = None
 
 # Setup the main logger
-logging.basicConfig(filename = 'html/data/main.log', filemode = 'w', format = '%(asctime)s;%(levelname)s;%(filename)s;%(message)s', level = logging.DEBUG)
+logging.basicConfig(filename = 'static/data/main.log', filemode = 'w', format = '%(asctime)s;%(levelname)s;%(filename)s;%(message)s', level = logging.DEBUG)
 
 def initialize_game():
     
@@ -48,24 +49,31 @@ def initialize_game():
 
 
 
+
 ## -------------------------------------------------------------
  #    START THE MAIN PROCESS
 ## -------------------------------------------------------------
-if __name__ == '__main__':
+#if __name__ == '__main__':
     
-    # Initialize game configuration based on input from command line
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--ip', type=str, default="127.0.0.1", help="Robot's IP address")
-    parser.add_argument('--port', type=int, default="9559", help="Robot's port number")
+# Start webserver
+#app = Flask(__name__, static_url_path='/html')
+app = Flask(__name__)
 
-    args = parser.parse_args()
 
-    robotIp = args.ip
-    port = args.port
 
+## -------------------------------------------------------------
+#    API ROUTES
+## -------------------------------------------------------------
+
+@app.route('/api/connect')
+def api_connect():
+    print('connecting')
+    # Initiate the game
     try:
-        logging.info("Robot's IP address set to %s", str(robotIp))
-        logging.info("Robot's port set to %s", str(port))
+        print('connecting')
+        robotIp = request.args.get('ip')
+        port = request.args.get('port')
+        logging.info("Connecting to robot at %s:%d", str(robotIp), int(port))
         
         myBroker = ALBroker("myBroker",
             "0.0.0.0",   # listen to anyone
@@ -73,15 +81,66 @@ if __name__ == '__main__':
             robotIp,     # parent broker IP
             port)        # parent broker port
 
-        # Initiate the game
+        from nao_control import NaoControl as NaoControlModule
+        from naoqi import ALBroker
         initialize_game()
-        
+
+        return 'ok'
     except Exception as e:
-        # Log the errors before game termination
-        print(e)
-        #logging.fatal("Game exectution failed")
-        logging.debug('Error message: %s', str(e).replace("\n"," ").replace("\t"," "))
-        
+        logging.error('Error message: %s', str(e).replace("\n"," ").replace("\t"," "))
         if NaoControl != None:
             NaoControl.relax_arms()
             NaoControl.cameraProxy.unsubscribe(NaoControl.video_client)
+        return e
+
+
+@app.route('/api/get_state')
+def api_get_status():
+    global NaoControl
+    return flask.Response(json.dumps(NaoControl), mimetype='application/json')
+
+@app.route('/api/say')
+def api_say():
+    global NaoControl
+    try:
+        text = request.args.get('text')
+        if NaoControl != None:
+            NaoControl.tts_say(text)
+        else:
+            return 'Not connected', 506
+    except Exception as e:
+        print(e)
+
+@app.route('/api/get_img_camera')
+def api_get_img_camera():
+    try:
+        return flask.Response('', mimetype='image/jpeg')
+    except Exception as e:
+        print(e)
+        return 'chyba', 599
+
+@app.route('/api/get_img_blob')
+def api_get_img_blob():
+    try:
+        return flask.Response('', mimetype='image/jpeg')
+    except Exception as e:
+        print(e)
+        return 'chyba', 599
+
+@app.route('/api/get_img_rectified')
+def api_get_img_rectified():
+    try:
+        return flask.Response('', mimetype='image/jpeg')
+    except Exception as e:
+        print(e)
+        return 'chyba', 599
+
+@app.route('/api/get_img_boardstate')
+def api_get_img_boardstate():
+    try:
+        return flask.Response('', mimetype='image/jpeg')
+    except Exception as e:
+        print(e)
+        return 'chyba', 599
+
+

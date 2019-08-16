@@ -1,9 +1,0 @@
-2019-07-26 14:49:07,186;INFO;main.py;Robot's IP address set to marvin.local
-2019-07-26 14:49:07,186;INFO;main.py;Robot's port set to 9559
-2019-07-26 14:49:09,258;DEBUG;nao_control.py;Proxies with Marvin established
-2019-07-26 14:49:09,906;DEBUG;nao_control.py;Connection with camera established + video_client subscription configured.
-2019-07-26 14:49:09,906;DEBUG;nao_control.py;Camera Matrix for SolvePnP established: [[888.52, 0.0, 666.72], [0.0, 859.38, 652.96], [0.0, 0.0, 1.0]]
-2019-07-26 14:49:11,723;DEBUG;nao_control.py;A camera snapshot was taken.
-2019-07-26 14:49:11,724;DEBUG;nao_vision.py;Computer vision initialized with the following camera size: (480, 640)
-2019-07-26 14:49:11,749;DEBUG;game_control.py;Game control initialized
-2019-07-26 14:49:13,015;DEBUG;nao_control.py;Initial position initiated by disabling autonomous life and basic awareness. Body stiffness enabled.

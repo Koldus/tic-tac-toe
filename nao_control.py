@@ -1,7 +1,4 @@
 import numpy as np
-from naoqi import ALProxy
-from naoqi import ALModule
-import almath
 import cv2
 import random
 import functools
@@ -39,17 +36,20 @@ class NaoControl(ALModule):
     #    MAIN FUNCTIONS
     ## -------------------------------------------------------------
 
-    def __init__(self, name, logging):        
-        '''
-        Constructor for NaoControl class - establishes necessary proxies with Nao robot and instantiates the game and vision objects.
-        '''
+    def __init__(self, name, logging):  
         global NaoControl
-
-        ALModule.__init__(self, name)
-
         self.logger = logging
         self.state = State()
 
+        '''
+        Constructor for NaoControl class - establishes necessary proxies with Nao robot and instantiates the game and vision objects.
+        '''
+
+        from naoqi import ALProxy
+        from naoqi import ALModule
+        import almath
+
+        ALModule.__init__(self, name)
         # Setup proxies to enable message exchange with the robot
         self.autoProxy = ALProxy("ALAutonomousLife")
         self.awarenessProxy = ALProxy("ALBasicAwareness")

@@ -58,7 +58,12 @@ python
 >>> import numpy
 >>> import cv2
 ```
-
+## Dashboard
+```
+export FLASK_APP=main.py
+flask run
+```
+Dashboard will be accessible on http://localhost:5000/static/index.html
 ## References
 
 A lot of inspiration has been derived from the following resources:
