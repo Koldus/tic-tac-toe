@@ -11,8 +11,7 @@ import sys, os
 import argparse
 from threading import Timer
 import logging
-from flask import Flask
-from flask import send_from_directory, request
+from flask import Flask, send_from_directory, request
 import json
 
 from config import *
@@ -56,11 +55,17 @@ def initialize_game():
 #if __name__ == '__main__':
     
 # Start webserver
-#app = Flask(__name__, static_url_path='/html')
 app = Flask(__name__)
 
+@app.route('/')
+def static_index():
+    return send_static_file('index.html')
 
-
+@app.route('/<path:filename>')
+def static_resources(filename):
+    #print(path)
+    print(filename)
+    return send_from_directory('static', filename)
 ## -------------------------------------------------------------
 #    API ROUTES
 ## -------------------------------------------------------------
