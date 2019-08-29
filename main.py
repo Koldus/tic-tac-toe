@@ -4,7 +4,7 @@ Nao Playing Tic-Tac-Toe, v0.1
 Date: June 18, 2019
 Company: DHL Information Services (Europe), s.r.o.
 
-@author: mkoldus
+@author: mkoldus, jslesing
 '''
 
 import sys, os
@@ -21,6 +21,7 @@ robotIp = "127.0.0.1"
 port = 9559
 
 NaoControl = None
+NaoControlModule = None
 
 # Setup the main logger
 logging.basicConfig(filename = 'static/data/main.log', filemode = 'w', format = '%(asctime)s;%(levelname)s;%(filename)s;%(message)s', level = logging.DEBUG)
@@ -63,8 +64,6 @@ def static_index():
 
 @app.route('/<path:filename>')
 def static_resources(filename):
-    #print(path)
-    print(filename)
     return send_from_directory('static', filename)
 ## -------------------------------------------------------------
 #    API ROUTES
@@ -72,22 +71,20 @@ def static_resources(filename):
 
 @app.route('/api/connect')
 def api_connect():
+    global NaoControlModule
     print('connecting')
-    # Initiate the game
     try:
-        print('connecting')
         robotIp = request.args.get('ip')
         port = request.args.get('port')
         logging.info("Connecting to robot at %s:%d", str(robotIp), int(port))
         
+        from naoqi import ALBroker
         myBroker = ALBroker("myBroker",
             "0.0.0.0",   # listen to anyone
             0,           # find a free port and use it
-            robotIp,     # parent broker IP
-            port)        # parent broker port
-
+            str(robotIp),     # parent broker IP
+            int(port))        # parent broker port
         from nao_control import NaoControl as NaoControlModule
-        from naoqi import ALBroker
         initialize_game()
 
         return 'ok'

@@ -7,6 +7,8 @@ import motion
 import sys
 
 from config import *
+from naoqi import ALModule
+import almath
 from nao_vision import NaoVision
 from game_control import GameControl
 
@@ -37,17 +39,15 @@ class NaoControl(ALModule):
     ## -------------------------------------------------------------
 
     def __init__(self, name, logging):  
-        global NaoControl
         self.logger = logging
         self.state = State()
-
+        global NaoControl
         '''
         Constructor for NaoControl class - establishes necessary proxies with Nao robot and instantiates the game and vision objects.
         '''
 
         from naoqi import ALProxy
         from naoqi import ALModule
-        import almath
 
         ALModule.__init__(self, name)
         # Setup proxies to enable message exchange with the robot
@@ -306,8 +306,9 @@ class NaoControl(ALModule):
     def onTouched(self, strVarName, value):
         global memory
         memory.unsubscribeToEvent("TouchChanged", "NaoControl")
-
+        logger.debug("Touched")
         for p in value:
+            logger.debug(p)
             if p[1]:
                 if p[0] == "RArm":
                     self.beg_for_token_finish("R")
