@@ -7,7 +7,7 @@ Company: DHL Information Services (Europe), s.r.o.
 @author: mkoldus, jslesing
 '''
 
-import sys, os
+import sys, os, signal
 import argparse
 from threading import Timer
 import logging
@@ -16,12 +16,16 @@ import json
 
 from config import *
 
+def sigint_handler(signum, frame):
+    shutdown_robot()
+ 
+signal.signal(signal.SIGINT, sigint_handler)
+
 # Default parameter
 robotIp = "127.0.0.1"
 port = 9559
 
 NaoControl = None
-NaoControlModule = None
 
 # Setup the main logger
 logging.basicConfig(filename = 'static/data/main.log', filemode = 'w', format = '%(asctime)s;%(levelname)s;%(filename)s;%(message)s', level = logging.DEBUG)
@@ -30,6 +34,7 @@ def initialize_game():
     
     # Setup robot connection
     global NaoControl
+    from nao_control import NaoControl as NaoControlModule
     NaoControl = NaoControlModule("NaoControl", logging)
     #NaoControl = robot
 
@@ -48,6 +53,11 @@ def initialize_game():
     sys.exit()
 
 
+def shutdown_robot():
+    print("Shutting down. Good night.")
+    if NaoControl != None:
+        NaoControl.relax_arms()
+        NaoControl.cameraProxy.unsubscribe(NaoControl.video_client)
 
 
 ## -------------------------------------------------------------
@@ -56,11 +66,13 @@ def initialize_game():
 #if __name__ == '__main__':
     
 # Start webserver
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 app = Flask(__name__)
 
 @app.route('/')
 def static_index():
-    return send_static_file('index.html')
+    return send_from_directory('static', 'index.html')
 
 @app.route('/<path:filename>')
 def static_resources(filename):
@@ -71,8 +83,6 @@ def static_resources(filename):
 
 @app.route('/api/connect')
 def api_connect():
-    global NaoControlModule
-    print('connecting')
     try:
         robotIp = request.args.get('ip')
         port = request.args.get('port')
@@ -84,15 +94,12 @@ def api_connect():
             0,           # find a free port and use it
             str(robotIp),     # parent broker IP
             int(port))        # parent broker port
-        from nao_control import NaoControl as NaoControlModule
         initialize_game()
 
         return 'ok'
     except Exception as e:
         logging.error('Error message: %s', str(e).replace("\n"," ").replace("\t"," "))
-        if NaoControl != None:
-            NaoControl.relax_arms()
-            NaoControl.cameraProxy.unsubscribe(NaoControl.video_client)
+        shutdown_robot()
         return e
 
 

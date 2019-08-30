@@ -49,7 +49,7 @@ class NaoControl(ALModule):
         from naoqi import ALProxy
         from naoqi import ALModule
 
-        ALModule.__init__(self, name)
+        ALModule.__init__(self, "HonzaJede")
         # Setup proxies to enable message exchange with the robot
         self.autoProxy = ALProxy("ALAutonomousLife")
         self.awarenessProxy = ALProxy("ALBasicAwareness")
@@ -305,8 +305,8 @@ class NaoControl(ALModule):
 
     def onTouched(self, strVarName, value):
         global memory
-        memory.unsubscribeToEvent("TouchChanged", "NaoControl")
         logger.debug("Touched")
+        memory.unsubscribeToEvent("TouchChanged", "NaoControl")
         for p in value:
             logger.debug(p)
             if p[1]:
