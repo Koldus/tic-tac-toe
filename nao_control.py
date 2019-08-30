@@ -5,6 +5,8 @@ import functools
 import time
 import motion
 import sys
+from naoqi import ALProxy
+from naoqi import ALModule
 
 from config import *
 from naoqi import ALModule
@@ -46,10 +48,7 @@ class NaoControl(ALModule):
         Constructor for NaoControl class - establishes necessary proxies with Nao robot and instantiates the game and vision objects.
         '''
 
-        from naoqi import ALProxy
-        from naoqi import ALModule
-
-        ALModule.__init__(self, "HonzaJede")
+        ALModule.__init__(self, name)
         # Setup proxies to enable message exchange with the robot
         self.autoProxy = ALProxy("ALAutonomousLife")
         self.awarenessProxy = ALProxy("ALBasicAwareness")
@@ -167,7 +166,7 @@ class NaoControl(ALModule):
                     "If you play like this, we will never finish",
                     "Do you know Mirek and Honza? They are my friends."
                     "Do not hesitate and make a move",
-                    "I am working for \\tn=spell\\DHL.\\tn=normal\\\\pau=500\\Do you?",
+                    "I am working for \\tn=spell\\d h l.\\tn=normal\\\\pau=500\\Do you?",
                     "Light is faster then sound.Sound is \\emph=2\\faster than you are",
                     "Are you also running on batteries?",
                     "Are you still playing?", 
