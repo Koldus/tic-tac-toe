@@ -19,6 +19,7 @@ memory = None
 
 class State:
     init_completed = False
+    stop_flag = False
     board_visible = False
     game_ready = False
     board = [[0,0,0], [0,0,0], [0,0,0]]
@@ -28,6 +29,31 @@ class State:
     next_placement = -1
     def __init__(self):
         pass
+
+    def init(self):
+        init_completed = False
+        stop_flag = False
+        board_visible = False
+        game_ready = False
+        board = [[0,0,0], [0,0,0], [0,0,0]]
+        result = -1
+        begging_left_arm = False
+        begging_right_arm = False
+        next_placement = -1
+
+    def convert_to_dict(self):
+        return {
+            'init_completed': self.init_completed,
+            'stop_flag': self.stop_flag,
+            'board_visible': self.board_visible,
+            'game_ready': self.game_ready,
+            'board': self.board,
+            'result': self.result,
+            'begging_left_arm': self.begging_left_arm,
+            'begging_right_arm': self.begging_right_arm,
+            'next_placement': self.next_placement
+        }
+
 
 class NaoControl(ALModule):    
     '''
@@ -43,7 +69,6 @@ class NaoControl(ALModule):
         '''
         Constructor for NaoControl class - establishes necessary proxies with Nao robot and instantiates the game and vision objects.
         '''
-        global NaoControl
 
         ALModule.__init__(self, name)
 
@@ -102,6 +127,7 @@ class NaoControl(ALModule):
 
     def wait_for_my_turn_completion(self):
         while self.state.my_turn:
+            #if self.state.stop_flag == True: break
             time.sleep(0.1)
 
 
@@ -113,28 +139,38 @@ class NaoControl(ALModule):
 
     def is_game_finished(self, wins):
         if wins == -1:
+            self.state.stop_flag = True
             self.game_lost()
             return True
         elif wins == 1:
+            self.state.stop_flag = True
             self.game_won()
             return True
         elif wins == 0:
+            self.state.stop_flag = True
             self.game_tie()
             return True
         return False
 
     def game_lost(self):
-        self.tts_say(["Capitulation. You are the winner. Congratulations.", "Hm. I lost. I am sure I will win next time.", "Good job. It is not easy to beat me"])
+        self.tts_say(["Capitulation. You are the winner. Congratulations.", 
+                "Hm. I lost. I am sure I will win next time.", 
+                "Good job. It is not easy to beat me"])
 
     def game_won(self):
-        self.tts_say(["Yes, yes, yes! I won again.", "Yupee. Of course, I won. I always win.", "I can play better than you. I won the game"])
+        self.tts_say(["Yes, yes, yes! I won again.", 
+                "Yupee. Of course, I won. I always win.", 
+                "I can play better than you. I won the game"])
     
     def game_tie(self):
-        self.tts_say(["That was a fun game. Your moves were optimal.", "Good job. It is a tie. It is not so easy to beat me", "You won. I won. It is a tie."])
+        self.tts_say(["That was a fun game. Your moves were optimal.", 
+                "Good job. It is a tie. It is not so easy to beat me", 
+                "You won. I won. It is a tie."])
 
     def wait_for_opponent_token(self):
         cycles = random.randrange(4)
         while True:
+            if self.state.stop_flag == True: break
             cycles = cycles + 1
             picture = self.take_a_look()
             board_seen = self.vision.get_current_state(picture)
@@ -173,22 +209,46 @@ class NaoControl(ALModule):
                     "Are you still playing?", 
                     "What's up?"])
 
+    def stop_game(self):
+        self.logger.debug("Trying to stop")
+        self.state.stop_flag = True
+
+    def stop_game_followup(self):
+        self.state.stop_flag = True
+        self.relax_arms()
+        self.tts_say(["You want to break this game? Why?",
+                    "Terminating the game. Stopping globe rotation.",
+                    "You stopped the game. That means you lost.",
+                    "Will you play again? \\pau=400\\Coward"])
 
     def begin_game(self):
         self.logger.debug("Game begins")
+        self.state.init()
         self.state.game_ready = True
         self.tts_say(["Lets start the game. \\vct=150\\You play first. \\vct=100\\Color of your tokens is \\pau=400\\ blue.", "Please start. It is your turn now. Your tokens are \\pau=400\\blue."])
 
         while True:
+            if self.state.stop_flag == True: break
             board_seen = self.wait_for_opponent_token() #image
-            self.tts_say(["Nice play", "I see", "Are you sure?", "Aha", "Fine", "OK ok", "Really?", "I thought you will play like this.", "That's good"])
+            self.tts_say(["Nice play", 
+                        "I see", 
+                        "Are you sure?", 
+                        "Aha", 
+                        "Fine", 
+                        "OK ok", 
+                        "Really?", 
+                        "I thought you will play like this.", 
+                        "That's good"])
             self.state.next_placement = self.game.play(board_seen)  # [row, col, state]  state 0:tie, 1:robotwins, -1:humanwins, None: continue
+            #if self.state.stop_flag == True: break
 
             if (self.state.next_placement[0] != None and self.state.next_placement[1] != None):
                 # marvin makes a move
                 self.game.render(self.state.board)
                 self.beg_for_token_start(self.arm_responsible(self.state.next_placement))
+                #if self.state.stop_flag == True: break
                 self.wait_for_my_turn_completion()
+                #if self.state.stop_flag == True: break
                 self.vision.renderImage(self.vision.get_current_state(self.take_a_look()))
 
             if self.is_game_finished(self.state.next_placement[2]):
@@ -196,9 +256,13 @@ class NaoControl(ALModule):
                 self.state.result = self.state.next_placement[2]
                 break
 
-            self.tts_say(["Your turn my dear", "Please go", "Your turn", "Please, play"])
+            self.tts_say(["Your turn my dear", 
+                        "Please go", 
+                        "Your turn", 
+                        "Please, play"])
         
-
+        if self.state.stop_flag == True:
+            self.stop_game_followup()
 
     
     ## -------------------------------------------------------------
@@ -300,12 +364,15 @@ class NaoControl(ALModule):
         self.motionProxy.setAngles(arm_side + "Hand", 0.1, 0.1)
         time.sleep(0.3)
 
+        # Close hand
+        self.motionProxy.setAngles(arm_side + "Hand", 0.1, 0.1)
+        time.sleep(0.3)
+
         self.motionProxy.setStiffnesses(arm_side + "Arm", 0.0)
 
 
     def onTouched(self, strVarName, value):
-        global memory
-        memory.unsubscribeToEvent("TouchChanged", "NaoControl")
+        memory.unsubscribeToEvent("TouchChanged", "nao_control")
 
         for p in value:
             if p[1]:
@@ -336,7 +403,7 @@ class NaoControl(ALModule):
         rTimes = [2.0] * 6
         self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
         global memory
-        memory.subscribeToEvent("TouchChanged", "NaoControl", "onTouched")
+        memory.subscribeToEvent("TouchChanged", "nao_control", "onTouched")
 
 
     def beg_for_token_finish(self, arm_side):

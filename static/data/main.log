@@ -1,0 +1,30 @@
+2019-09-06 15:16:06,862;INFO;main.py;Robot's IP address set to marvin.local
+2019-09-06 15:16:06,862;INFO;main.py;Robot's port set to 9559
+2019-09-06 15:16:11,278;DEBUG;nao_control.py;Proxies with Marvin established
+2019-09-06 15:16:11,933;DEBUG;nao_control.py;Connection with camera established + video_client subscription configured.
+2019-09-06 15:16:11,934;DEBUG;nao_control.py;Camera Matrix for SolvePnP established: [[888.52, 0.0, 666.72], [0.0, 859.38, 652.96], [0.0, 0.0, 1.0]]
+2019-09-06 15:16:12,777;DEBUG;nao_control.py;A camera snapshot was taken.
+2019-09-06 15:16:12,778;DEBUG;nao_vision.py;Computer vision initialized with the following camera size: (640, 480)
+2019-09-06 15:16:12,779;DEBUG;game_control.py;Game control initialized
+2019-09-06 15:16:16,427;DEBUG;nao_control.py;Initial position initiated by disabling autonomous life and basic awareness. Body stiffness enabled.
+2019-09-06 15:16:28,097;DEBUG;nao_control.py;A camera snapshot was taken.
+2019-09-06 15:16:28,113;DEBUG;nao_vision.py;Image has been pre-processed for further analysis.
+2019-09-06 15:16:28,116;DEBUG;nao_vision.py;A sufficiently large blob has been identified. Image will now be cleaned.
+2019-09-06 15:16:28,121;DEBUG;nao_vision.py;The image has been cleaned. Next line detection analysis will be performed.
+2019-09-06 15:16:28,141;DEBUG;nao_vision.py;Game board detected.
+2019-09-06 15:16:29,293;DEBUG;nao_control.py;Board found True
+2019-09-06 15:16:30,014;DEBUG;nao_control.py;A camera snapshot was taken.
+2019-09-06 15:16:30,027;DEBUG;nao_vision.py;Image has been pre-processed for further analysis.
+2019-09-06 15:16:30,029;DEBUG;nao_vision.py;A sufficiently large blob has been identified. Image will now be cleaned.
+2019-09-06 15:16:30,033;DEBUG;nao_vision.py;The image has been cleaned. Next line detection analysis will be performed.
+2019-09-06 15:16:30,054;DEBUG;nao_vision.py;Game board detected.
+2019-09-06 15:16:30,083;DEBUG;nao_control.py;Board found True
+2019-09-06 15:16:30,702;DEBUG;nao_control.py;A camera snapshot was taken.
+2019-09-06 15:16:30,713;DEBUG;nao_vision.py;Image has been pre-processed for further analysis.
+2019-09-06 15:16:30,715;DEBUG;nao_vision.py;A sufficiently large blob has been identified. Image will now be cleaned.
+2019-09-06 15:16:30,720;DEBUG;nao_vision.py;The image has been cleaned. Next line detection analysis will be performed.
+2019-09-06 15:16:30,746;DEBUG;nao_vision.py;Game board detected.
+2019-09-06 15:16:30,763;DEBUG;nao_control.py;Board found True
+2019-09-06 15:16:30,786;DEBUG;nao_vision.py;The image coordinates have been fixed. Do not move the board from this point forward.
+2019-09-06 15:16:30,787;INFO;nao_control.py;Game board detected and stabilized! Initiation sequence can now proceed further.
+2019-09-06 15:16:36,206;DEBUG;nao_control.py;Initial position assumed, default position set to Crouch for efficient stability

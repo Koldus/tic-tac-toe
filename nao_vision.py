@@ -102,7 +102,7 @@ class NaoVision:
         ignore_margin_pt = 10
 
         # Store image for dashboard
-        cv.imwrite(os.path.join("html/data", "raw_image.jpg"), img)
+        cv.imwrite(os.path.join("static/data", "raw_image.jpg"), img)
 
         # Store image with lines and intersects
         im_lines = self.image_preprocessing(img)
@@ -111,17 +111,17 @@ class NaoVision:
         for line in self.lines[0] + self.lines[1]:
             im_lines = self.draw_lines(line[0], im_lines)
         
-        cv.imwrite(os.path.join("html/data", "lines.jpg"), im_lines)
+        cv.imwrite(os.path.join("static/data", "lines.jpg"), im_lines)
         
         # Store image for dashboard
-        cv.imwrite(os.path.join("html/data", "raw_image.jpg"), img)
+        cv.imwrite(os.path.join("static/data", "raw_image.jpg"), img)
 
         # Re-shape the image to correct for the perspective
         M = cv.getPerspectiveTransform(self.corners, self.matrix_destination)
         warp = cv.warpPerspective(img, M, (self.matrix_dim, self.matrix_dim))
         
         # Store image for dashboard
-        cv.imwrite(os.path.join("html/data", "current_state_raw.jpg"), warp)
+        cv.imwrite(os.path.join("static/data", "current_state_raw.jpg"), warp)
         
         # Setup empty arrays for the current state
         current_state = [[0,0,0],[0,0,0],[0,0,0]]
@@ -556,7 +556,7 @@ class NaoVision:
             
             r = r + 1
 
-        cv.imwrite(os.path.join("html/data", "game_state.jpg"), img)
+        cv.imwrite(os.path.join("static/data", "game_state.jpg"), img)
 
 
 
