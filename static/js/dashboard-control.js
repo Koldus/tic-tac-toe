@@ -55,5 +55,21 @@ $(document).ready(function() {
             null,
             { "width": "180px" }
         ] });
+    $( "#initButton" ).click(function() {
+        console.log('Robot init requested');
+        $.ajax('http://localhost:5000/api/init_robot');
+    });
+    $( "#startButton" ).click(function() {
+        console.log('Starting game');
+        $.ajax('http://localhost:5000/api/start_game');
+    });
+    $( "#stopButton" ).click(function() {
+        console.log('Stop game requested');
+        $.ajax('http://localhost:5000/api/stop_game');
+    });
+    $( "#restButton" ).click(function() {
+        console.log('Rest the robot');
+        $.ajax('http://localhost:5000/api/rest_robot');
+    });
     setTimeout(update_dashboard, 500);
 });

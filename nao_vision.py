@@ -11,7 +11,12 @@ Embedded simplifications:
 - image segments the analysis is performed on are hard-coded, it should be replaced with dymamic values returned from the board analysis
 '''
 
-class NaoVision:    
+class NaoVision:
+
+    img_camera = None
+    img_lines = None
+    img_rectified = None
+    img_current_state = None
 
     def __init__(self, sizes, logging):
         self.logger = logging
@@ -90,7 +95,6 @@ class NaoVision:
         return(im_lines)
 
 
-
     def get_current_state(self, img):
         '''
         Perform analysis of the requested image
@@ -101,9 +105,6 @@ class NaoVision:
         color_threshold = 20
         ignore_margin_pt = 10
 
-        # Store image for dashboard
-        cv.imwrite(os.path.join("static/data", "raw_image.jpg"), img)
-
         # Store image with lines and intersects
         im_lines = self.image_preprocessing(img)
         im_lines = cv.cvtColor(im_lines, cv.COLOR_GRAY2RGB)
@@ -112,6 +113,8 @@ class NaoVision:
             im_lines = self.draw_lines(line[0], im_lines)
         
         cv.imwrite(os.path.join("static/data", "lines.jpg"), im_lines)
+        self.img_lines = cv.imencode(".jpg", im_lines)
+
         
         # Store image for dashboard
         cv.imwrite(os.path.join("static/data", "raw_image.jpg"), img)

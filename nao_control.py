@@ -127,7 +127,7 @@ class NaoControl(ALModule):
 
     def wait_for_my_turn_completion(self):
         while self.state.my_turn:
-            #if self.state.stop_flag == True: break
+            if self.state.stop_flag == True: break
             time.sleep(0.1)
 
 
@@ -172,8 +172,7 @@ class NaoControl(ALModule):
         while True:
             if self.state.stop_flag == True: break
             cycles = cycles + 1
-            picture = self.take_a_look()
-            board_seen = self.vision.get_current_state(picture)
+            board_seen = self.vision.get_current_state(self.take_a_look())
             self.logger.debug("board_seen {}".format(board_seen))
             if self.is_board_changed(board_seen):
                 self.state.my_turn = True
@@ -246,9 +245,7 @@ class NaoControl(ALModule):
                 # marvin makes a move
                 self.game.render(self.state.board)
                 self.beg_for_token_start(self.arm_responsible(self.state.next_placement))
-                #if self.state.stop_flag == True: break
                 self.wait_for_my_turn_completion()
-                #if self.state.stop_flag == True: break
                 self.vision.renderImage(self.vision.get_current_state(self.take_a_look()))
 
             if self.is_game_finished(self.state.next_placement[2]):
@@ -362,14 +359,32 @@ class NaoControl(ALModule):
 
         # Close hand
         self.motionProxy.setAngles(arm_side + "Hand", 0.1, 0.1)
-        time.sleep(0.3)
-
-        # Close hand
-        self.motionProxy.setAngles(arm_side + "Hand", 0.1, 0.1)
-        time.sleep(0.3)
+        time.sleep(0.5)
 
         self.motionProxy.setStiffnesses(arm_side + "Arm", 0.0)
 
+    def rest_robot(self):
+        self.motionProxy.setStiffnesses("RArm", 1.0)
+        self.motionProxy.setStiffnesses("LArm", 1.0)
+
+        # move hands up to safe position
+        rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "RHand", "LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw", "LHand"]
+        rValues = [rad(40.0), rad(1.0), rad(85.0), rad(48.0), rad(5.0), rad(0.03),
+                   rad(40.0), rad(1.0), rad(-85.0), rad(-48.0), rad(5.0), rad(0.03)]
+        rTimes = [2.0] * 12
+        self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
+
+        self.tts_say(["I am going to sleep. You shall remove the table first."])
+
+        # move hands down
+        rNames = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"]
+        rValues = [rad(85.0), rad(-5.0), rad(48.0), rad(63.0), rad(13.0),
+                   rad(82.0), rad(1.0), rad(-45.0), rad(-61.0), rad(6.0)]
+        rTimes = [2.0] * 10
+        self.motionProxy.angleInterpolation(rNames, rValues, rTimes, True)
+
+        # turn off the power
+        self.motionProxy.rest()
 
     def onTouched(self, strVarName, value):
         memory.unsubscribeToEvent("TouchChanged", "nao_control")

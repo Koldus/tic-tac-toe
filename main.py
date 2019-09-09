@@ -89,6 +89,11 @@ try:
     def static_resources(filename):
         return send_from_directory('static', filename)
 
+    @app.route('/api/init_robot')
+    def api_init_robot():
+        nao_control.assume_initial_position()
+        return OK, 200
+
     @app.route('/api/start_game')
     def api_start_game():
         nao_control.begin_game()
@@ -97,6 +102,11 @@ try:
     @app.route('/api/stop_game')
     def api_stop_game():
         nao_control.stop_game()
+        return OK, 200
+
+    @app.route('/api/rest_robot')
+    def api_rest_robot():
+        nao_control.rest_robot()
         return OK, 200
 
     @app.route('/api/get_state')
@@ -124,15 +134,17 @@ try:
     @app.route('/api/get_img_camera')
     def api_get_img_camera():
         try:
-            return flask.Response('', mimetype='image/jpeg')
+            
+            return Response('', mimetype='image/jpeg')
         except Exception as e:
             print(e)
             return 'chyba', 599
 
-    @app.route('/api/get_img_blob')
-    def api_get_img_blob():
+    @app.route('/api/get_img_lines')
+    def api_get_img_lines():
         try:
-            return flask.Response('', mimetype='image/jpeg')
+            jpg = nao_control.vision.img_lines #doesnot work yet
+            return Response(jpg, mimetype='image/jpeg')
         except Exception as e:
             print(e)
             return 'chyba', 599
@@ -140,7 +152,7 @@ try:
     @app.route('/api/get_img_rectified')
     def api_get_img_rectified():
         try:
-            return flask.Response('', mimetype='image/jpeg')
+            return Response('', mimetype='image/jpeg')
         except Exception as e:
             print(e)
             return 'chyba', 599
@@ -148,7 +160,7 @@ try:
     @app.route('/api/get_img_boardstate')
     def api_get_img_boardstate():
         try:
-            return flask.Response('', mimetype='image/jpeg')
+            return Response('', mimetype='image/jpeg')
         except Exception as e:
             print(e)
             return 'chyba', 599
